@@ -1,0 +1,646 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/*
+ * VRT color system: derived directly from the VRT logo (sampled from
+ * vrt-logo.png): red #A70210 (wordmark top), green #69B201 (ring + wordmark
+ * bottom), warm white/cream disc, on a charcoal-neutral text base.
+ *
+ * Each color has ONE job (applied identically in client-admin and client-pastor):
+ *   cream/ink , dominant surfaces & text (~60-70% of every screen)
+ *   brand red , brand chrome + attention only: logo, active nav, emergencies,
+ *                unread badges (~10-15%). Never a surface fill for content.
+ *   offering  , the offerings/money category: "Record offering", money figures,
+ *                offering chips and chart bars (red family tints).
+ *   people    , the attendance/people category + success states: "Record
+ *                attendance", attendance figures, people chips, bars (green family).
+ *   amber     : warning/pending.  danger: errors only (kept distinct from brand red).
+ */
+@theme {
+  /* ---- Brand red: logo wordmark #A70210 (brand chrome / attention only) ---- */
+  --color-brand-950: #2B0007;
+  --color-brand-900: #3F000B;
+  --color-brand-800: #5E0110;
+  --color-brand-700: #7C0115;
+  --color-brand-600: #A70210; /* exact logo red */
+  --color-brand-500: #C22A36;
+  --color-brand-400: #D9565F;
+  --color-brand-300: #EDA6AB;
+  --color-brand-100: #F8DFE1;
+  --color-brand-50: #FBF0F1;
+
+  /* ---- Offerings / money: the same logo-red family (category color) ---- */
+  --color-offering-800: #7C0115;
+  --color-offering-700: #8F0118;
+  --color-offering-600: #A70210; /* exact logo red */
+  --color-offering-500: #C13A44;
+  --color-offering-400: #D46A6F;
+  --color-offering-300: #EDA9AE;
+  --color-offering-100: #F7D5D8;
+  --color-offering-50: #FBEBEC;
+
+  /* ---- Attendance / people + success: logo ring green #69B201 ---- */
+  --color-people-900: #243D03;
+  --color-people-800: #3E6E00;
+  --color-people-700: #4C8100; /* darkest tint that still passes AA with white text */
+  --color-people-600: #69B201; /* exact logo green: accents/charts, not small text */
+  --color-people-500: #86C94A;
+  --color-people-400: #A8D873;
+  --color-people-300: #C4E39A;
+  --color-people-200: #DCEFC0;
+  --color-people-100: #EAF4D9;
+  --color-people-50: #F4F9EB;
+
+  /* ---- Status (kept distinct from brand red) ---- */
+  --color-amber-800: #92400E; /* warning / pending */
+  --color-amber-700: #B45309;
+  --color-amber-600: #D97706;
+  --color-amber-500: #F59E0B;
+  --color-amber-300: #FCD34D;
+  --color-amber-100: #FEF3C7;
+  --color-amber-50: #FFFBEB;
+
+  --color-danger-700: #B42318; /* error / critical, never used for brand */
+  --color-danger-600: #D92D20;
+  --color-danger-500: #F04438;
+  --color-danger-400: #F97066;
+  --color-danger-300: #FECDCA;
+  --color-danger-200: #FED7D5;
+  --color-danger-100: #FEE4E2;
+  --color-danger-50: #FEF3F2;
+
+  /* ---- Warm neutrals: cream disc from the logo + softened charcoal text ---- */
+  --color-canvas: #F6F2E9; /* page background */
+  --color-paper: #FDFBF6;  /* cards, sheets */
+  --color-cream-300: #E7E0CE;
+  --color-cream-200: #F3EDDF;
+  --color-cream-100: #F8F4EA;
+  --color-cream-50: #FDFBF6;
+
+  --color-ink-900: #201E1A; /* charcoal body text */
+  --color-ink-800: #33302A;
+  --color-ink-700: #4A463F;
+  --color-ink-600: #5F5A50;
+  --color-ink-500: #6E685D;
+  --color-ink-400: #8B857A;
+  --color-ink-300: #B4ADA0;
+  --color-ink-200: #D8D2C4;
+  --color-ink-100: #E9E5DA;
+  --color-ink-50: #F1EEE5;
+
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* ---- Design system: one corner radius, one restrained shadow ----
+   * Cards/tiles/modal = 12px (rounded-lg and rounded-xl both land here);
+   * inputs/buttons = 10px; pills stay fully round. One subtle elevation
+   * shadow for every raised element: no shadow variety per screen. */
+  --radius-DEFAULT: 10px;
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+  --radius-3xl: 16px;
+  --radius-4xl: 20px;
+
+  /* Best practice for soft material shadows: y-offset 1, blur 3-4x, low spread. */
+  --shadow-2xs: 0 1px 2px 0 rgb(32 30 26 / 0.05);
+  --shadow-xs: 0 1px 3px 0 rgb(32 30 26 / 0.06);
+  --shadow-sm: 0 1px 2px 0 rgb(32 30 26 / 0.05), 0 1px 4px 0 rgb(32 30 26 / 0.04);
+  --shadow: 0 1px 2px 0 rgb(32 30 26 / 0.05), 0 1px 4px 0 rgb(32 30 26 / 0.04);
+  --shadow-md: 0 1px 2px 0 rgb(32 30 26 / 0.05), 0 1px 4px 0 rgb(32 30 26 / 0.04);
+  --shadow-lg: 0 1px 2px 0 rgb(32 30 26 / 0.05), 0 1px 4px 0 rgb(32 30 26 / 0.04);
+  --shadow-xl: 0 1px 2px 0 rgb(32 30 26 / 0.06), 0 2px 8px 0 rgb(32 30 26 / 0.05);
+  --shadow-2xl: 0 2px 6px 0 rgb(32 30 26 / 0.07), 0 4px 14px 0 rgb(32 30 26 / 0.05);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-body);
+    color: var(--color-ink-900);
+    background-color: var(--color-canvas);
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+  /* iOS Safari zooms into any input with font-size < 16px: avoid that. */
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  /* Consistent category chips/accent bars used across both apps. */
+  .category-people        { --cat-color: var(--color-people-700);   --cat-soft: var(--color-people-50); }
+  .category-offering      { --cat-color: var(--color-offering-700); --cat-soft: var(--color-offering-50); }
+  .category-offering-deep { --cat-color: var(--color-offering-800); --cat-soft: var(--color-offering-100); }
+  .category-ink           { --cat-color: var(--color-ink-600);      --cat-soft: var(--color-ink-100); }
+  .category-amber         { --cat-color: var(--color-amber-600);    --cat-soft: var(--color-amber-50); }
+  .category-danger        { --cat-color: var(--color-danger-600);   --cat-soft: var(--color-danger-50); }
+  .category-success       { --cat-color: var(--color-people-700);   --cat-soft: var(--color-people-50); }
+
+  .cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 9999px;
+    padding: 0.125rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--cat-color, var(--color-ink-700));
+    background: var(--cat-soft, var(--color-ink-100));
+    white-space: nowrap;
+  }
+
+  /* DataTable cells are fixed tracks. A pill's default nowrap/min-content size
+   * must not be allowed to escape its track and paint over the next cell.
+   * These rules are intentionally scoped to the shared table shell: pills in
+   * forms and page headers can remain single-line, while table pills wrap inside
+   * the space their cell actually owns. */
+  .scb td:not([colspan]) {
+    min-width: 0;
+    max-width: 0;
+    overflow: hidden;
+  }
+  .data-table-cell-content {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .data-table-cell-content > .flex,
+  .data-table-cell-content > .inline-flex,
+  .data-table-cell-content .inline-flex {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  .data-table-cell-content > .flex > span:not(.cat-chip) {
+    display: flex;
+    flex: 0 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  .data-table-cell-content .cat-chip {
+    display: flex;
+    min-width: 0;
+    width: fit-content;
+    max-width: 100%;
+    flex-shrink: 1;
+    flex-wrap: wrap;
+  }
+  .scb .data-table-cell-content {
+    display: block;
+    width: 100%;
+  }
+  .scb .data-table-cell-content > .cat-chip {
+    display: inline-flex;
+    width: fit-content;
+    max-width: 100%;
+  }
+  .scb .data-table-cell-content > .flex,
+  .scb .data-table-cell-content > .inline-flex,
+  .scb .data-table-cell-content .inline-flex {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  /* A status renderer may group a badge with fixed-size receipt actions. Treat
+   * that group as a full-width flex line in its status cell; otherwise its
+   * min-content width can pull left over the Amount track. */
+  .scb .data-table-cell-content > .flex > span:not(.cat-chip) {
+    display: flex;
+    flex: 0 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  .scb .data-table-cell-content .cat-chip {
+    display: inline-flex;
+    min-width: 0;
+    width: fit-content;
+    max-width: 100%;
+    flex-shrink: 1;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word;
+    flex-wrap: wrap;
+    line-height: 1.25;
+  }
+
+  /* The receptionist's daily ledger gets a calmer, denser visual hierarchy:
+   * clear column rules, a soft row hover, and badges that stay compact instead
+   * of stretching across the entire cell. */
+  .today-offerings-table {
+    border: 1px solid var(--color-ink-100);
+    background: var(--color-paper);
+    box-shadow: 0 1px 2px rgb(31 26 20 / 0.04);
+  }
+  .today-offerings-table thead th {
+    border-bottom: 1px solid var(--color-ink-200);
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    color: var(--color-ink-500);
+    letter-spacing: 0.08em;
+  }
+  .today-offerings-table tbody tr {
+    transition: background-color 140ms ease;
+  }
+  .today-offerings-table tbody tr:hover {
+    background: var(--color-ink-50);
+  }
+  .today-offerings-table tbody td {
+    padding-top: 0.875rem;
+    padding-bottom: 0.875rem;
+  }
+  .today-offerings-table .cat-chip {
+    font-size: 0.6875rem;
+    line-height: 1.25;
+  }
+  /* Keep category names as the compact single-line pills used throughout the
+   * rest of the app. Long labels truncate cleanly rather than colliding with
+   * the giver column. */
+  .today-offerings-table .cat-chip {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+  }
+  .today-offering-status {
+    display: flex;
+    min-width: 0;
+    max-width: 100%;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+  }
+  .today-sent-status {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    background: var(--color-people-50);
+    padding: 0.2rem 0.55rem;
+    color: var(--color-people-800);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+  .today-receipt-group {
+    display: flex;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+  /* Receipt references support the actions but should not compete with the
+   * amount. Keep the code on one line, with ellipsis only when the cell is
+   * genuinely too narrow; the title exposes the complete value on hover. */
+  .today-receipt-number {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 auto;
+    overflow: hidden;
+    color: var(--color-ink-400);
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.25;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .today-receipt-group > .inline-flex {
+    flex: 0 0 auto;
+  }
+  .today-receipt-group > .inline-flex a {
+    width: 2rem;
+    height: 2rem;
+  }
+  .today-offerings-table tbody td:first-child .cat-chip {
+    display: block;
+    width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+  .today-offerings-table tbody td:nth-child(2) .data-table-cell-content,
+  .today-offerings-table tbody td:nth-child(3) .data-table-cell-content {
+    line-height: 1.4;
+  }
+  .today-offerings-table .data-table-cell-content > .flex {
+    row-gap: 0.375rem;
+  }
+  .today-offerings-table .today-offering-status {
+    width: 100%;
+    overflow: hidden;
+  }
+  .today-offerings-table .today-receipt-group {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    overflow: hidden;
+  }
+  .today-offerings-table .today-receipt-number {
+    white-space: nowrap;
+  }
+  .data-table-cell-content .cat-chip {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word;
+  }
+  .cat-accent-left {
+    border-left: 4px solid var(--cat-color, var(--color-brand-600));
+  }
+
+  /* Slim, unobtrusive scrollbar for horizontal nav/table strips on mobile. */
+  .scb {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-200) transparent;
+  }
+  .scb::-webkit-scrollbar {
+    height: 4px;
+  }
+  .scb::-webkit-scrollbar-thumb {
+    background: var(--color-ink-200);
+    border-radius: 9999px;
+  }
+  .scb::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* The resting state of anything motion animates, asserted once the animation
+   * would be over (see src/motionUi.js: useSettled, and the reasoning there).
+   *
+   * WHY !important: Motion positions an element by writing inline styles, and an
+   * inline style normally wins over a class. A renderer that never advances its
+   * animation timeline, a throttled background webview, a non-compositing
+   * embed, would otherwise leave the element where the animation STARTED: the
+   * nav drawer parked off-screen, a confirmation invisible, an edit panel at
+   * zero height. An important declaration is the one thing that beats that
+   * inline style, so the resting position of every animated element is settled
+   * by this rule rather than by a frame having been painted.
+   *
+   * `height: auto` is included for the edit panels that open from 0: for a
+   * banner, a drawer or a table row it is the height they already had. */
+  .motion-settled {
+    transform: none !important;
+    opacity: 1 !important;
+    height: auto !important;
+  }
+
+  /* ------------------------------------------------------------------
+   * Print stylesheet: the front desk's day records.
+   *
+   * Ctrl+P on the receptionist dashboard prints the day's two tables
+   * (attendance entries, offerings) as clean fixed tables under a
+   * print-only letterhead (PrintMasthead.jsx): no nav, no entry forms,
+   * no row controls, no screen shadows: the printed page is the
+   * record, ready to sign and file.
+   *
+   * The tables are the shared DataTable fixed grid; the grid (vs the
+   * card reflow) is chosen in JS and forced while printing in
+   * components/DataTable.jsx: a media query alone cannot re-run that
+   * choice. Everything else is CSS, here.
+   * ------------------------------------------------------------------ */
+  /* Content that exists only on paper: the masthead, and anything else
+   * a page marks .print-only. The inverse of .no-print: hidden here on
+   * screen, revealed by the print block below. Both halves are needed:
+   * a bare .print-only rule would otherwise still apply when printing. */
+  .print-only {
+    display: none;
+  }
+
+  @media print {
+    body {
+      background: var(--color-paper) !important;
+    }
+    /* The document look: ink on plain paper. Fills and shadows go,
+     * chips keep their text color, so category and status meaning
+     * survives even with the printer's background graphics switched
+     * off. Text colors always print. */
+    body * {
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+
+    /* App chrome never prints: top bar, nav drawer, and anything a
+     * page marks .no-print (the entry forms, send-summary card,
+     * status banners, screen-only icons and links). */
+    header, nav, .no-print {
+      display: none !important;
+    }
+    /* .print-only is the inverse of .no-print: never on screen, always
+     * on paper. !important so it beats the screen-side hide rule above. */
+    .print-only {
+      display: block !important;
+    }
+
+    /* The letterhead (markup in PrintMasthead.jsx). Sizes are fixed in
+     * pt so the sheet looks the same from any browser, and the design
+     * is ink-only: rules and type, no fills, so it survives the
+     * printer's "background graphics" switch being off. */
+    .print-masthead {
+      margin: 0 0 1.75rem;
+      break-inside: avoid;
+    }
+    .print-masthead-rule {
+      border: 0;
+      border-top: 2.5px solid var(--color-ink-900);
+    }
+    .print-masthead-rule-thin {
+      border-top-width: 1px;
+      border-top-color: var(--color-ink-300);
+    }
+    .print-masthead-church {
+      font-family: var(--font-display);
+      font-size: 20pt;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--color-ink-900);
+      margin: 10pt 0 2pt;
+    }
+    .print-masthead-address {
+      font-size: 8.5pt;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-ink-500);
+      margin: 0 0 10pt;
+    }
+    .print-masthead-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 2pt 12pt;
+      margin: 10pt 0 8pt;
+    }
+    .print-masthead-title {
+      font-family: var(--font-display);
+      font-size: 12pt;
+      font-weight: 600;
+      color: var(--color-ink-800);
+      margin: 0;
+    }
+    .print-masthead-date {
+      font-variant-numeric: tabular-nums;
+      font-size: 10.5pt;
+      font-weight: 500;
+      color: var(--color-ink-700);
+      margin: 0;
+    }
+    .print-masthead-totals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6pt 28pt;
+      margin: 0 0 10pt;
+    }
+    .print-masthead-stat dd {
+      font-family: var(--font-display);
+      font-size: 13pt;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-ink-900);
+      margin: 0;
+    }
+    .print-masthead-stat dt {
+      font-size: 7.5pt;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--color-ink-500);
+      margin: 0 0 1pt;
+    }
+
+    /* One flowing document, not an app viewport: no max width, no
+     * card chrome: tiles become ruled sections under their headings. */
+    main {
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .day-grid {
+      display: block !important;
+      gap: 0 !important;
+    }
+    .tile {
+      border: 0 !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
+      margin: 0 0 1.5rem !important;
+      break-inside: avoid;
+    }
+
+    /* The fixed grid, hardened for paper: no scroll remnants, no
+     * clipped rows, headers repeated on every page, a printable
+     * hairline under the header row, headings kept with their table. */
+    .scb {
+      overflow: visible !important;
+      max-height: none !important;
+    }
+    table {
+      width: 100% !important;
+    }
+    thead {
+      display: table-header-group;
+    }
+    th {
+      position: static !important;
+      border-bottom: 1px solid var(--color-ink-600) !important;
+    }
+    tr, .cat-chip {
+      break-inside: avoid;
+    }
+    h2, h3 {
+      break-after: avoid;
+    }
+  }
+
+  /* ---- Shared interactive + surface primitives (both apps, same tokens) ---- */
+  /* One card/tile style everywhere. */
+  .tile {
+    border: 1px solid var(--color-ink-200);
+    border-radius: var(--radius-xl);
+    background: var(--color-paper);
+    box-shadow: var(--shadow-sm);
+  }
+  /* Buttons: one filled primary (single most important action per screen),
+   * one neutral secondary, one quiet ghost. Same size & radius everywhere. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-md);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .btn-lg {
+    padding: 0.875rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .btn-primary { background: var(--color-brand-600); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--color-brand-700); }
+  .btn-people { background: var(--color-people-700); color: #fff; }
+  .btn-people:hover:not(:disabled) { background: var(--color-people-600); }
+  .btn-offering { background: var(--color-offering-600); color: #fff; }
+  .btn-offering:hover:not(:disabled) { background: var(--color-offering-700); }
+  .btn-secondary { background: var(--color-paper); color: var(--color-ink-700); border: 1px solid var(--color-ink-200); }
+  .btn-secondary:hover:not(:disabled) { background: var(--color-ink-50); color: var(--color-ink-900); }
+  .btn-ghost { background: transparent; color: var(--color-ink-600); }
+  .btn-ghost:hover:not(:disabled) { background: var(--color-ink-100); color: var(--color-ink-900); }
+  .btn-ink { background: var(--color-ink-800); color: var(--color-cream-50); }
+  .btn-ink:hover:not(:disabled) { background: var(--color-ink-900); }
+  /* Destructive, and only destructive: the danger scale exists for exactly this
+   * and is never used for brand. */
+  .btn-danger { background: var(--color-danger-600); color: #fff; }
+  .btn-danger:hover:not(:disabled) { background: var(--color-danger-700); }
+
+  /* Bento dashboard grid: 16px gutter, tiles reflow into one column first on
+   * small screens in DOM priority order (most important tile first). */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .bento > * { min-width: 0; }
+}
+
+/* Page setup lives at the top level: @page is not a style rule and cannot
+ * sit inside @layer. Margins leave room for the browser's own header/footer
+ * (date, title, page number), which is exactly what a filed day record wants. */
+@page {
+  margin: 14mm;
+}

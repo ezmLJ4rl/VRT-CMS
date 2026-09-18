@@ -1,0 +1,17 @@
+# The encoding bug this repo already shipped once — "·" rendering as "Â·" — came
+# from a file saved through a cp1252 round trip, not from the database or the
+# API. Pinning the charset here stops an editor from doing it again, and
+# server/test/encoding.test.js fails the build if one slips through.
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{js,jsx,json,css,md,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

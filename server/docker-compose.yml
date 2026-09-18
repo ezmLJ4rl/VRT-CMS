@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: vrt-cms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vrt_admin
+      POSTGRES_PASSWORD: ezm.LJ4rl
+      POSTGRES_DB: vrt_cms
+    ports:
+      - "5432:5432"
+    volumes:
+      - vrt_pg_data:/var/lib/postgresql/data
+
+volumes:
+  vrt_pg_data:

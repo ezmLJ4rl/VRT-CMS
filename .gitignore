@@ -1,0 +1,45 @@
+# ====================== Secrets ==========================
+# Environment files contain JWT/encryption/VAPID/SMTP credentials.
+# Never commit them — copy .env.example to .env and fill in real values.
+.env
+.env.*
+!.env.example
+
+# ====================== SQLite databases =================
+# The live database (users, audit log, offering records) must never be
+# committed. Both the server's default location and the repo-root copy
+# used by tools are covered below.
+db/*.sqlite
+db/*.sqlite-shm
+db/*.sqlite-wal
+server/db/*.sqlite
+server/db/*.sqlite-shm
+server/db/*.sqlite-wal
+server/db/backups/
+db/backups/
+*.sqlite3
+*.sqlite3-*
+
+# ====================== Dependencies =====================
+node_modules/
+
+# ====================== Build output =====================
+# Production builds are deployed artifacts, not source.
+client-admin/dist/
+client-pastor/dist/
+client-pastor/dev-dist/
+
+# ====================== Logs & OS files ==================
+*.log
+*-out.txt
+npm-install.txt
+# Scratch output from the coding agent that works in this checkout (rendered
+# document previews, one-off scripts). Never part of the application.
+.freebuff/
+.DS_Store
+Thumbs.db
+
+# ====================== Editor ===========================
+.idea/
+.vscode/
+*.sw?

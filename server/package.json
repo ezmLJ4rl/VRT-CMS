@@ -1,0 +1,36 @@
+{
+  "name": "vrt-cms-server",
+  "version": "1.0.0",
+  "description": "VRT CMS and VRT Pastor API",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "seed": "node db/seed.pg.js",
+    "test": "node --test --test-concurrency=1 \"test/*.test.js\"",
+    "backup": "node scripts/backup.js",
+    "seed:samples": "node scripts/sample-trends.js seed",
+    "purge:samples": "node scripts/sample-trends.js purge",
+    "seed:giving": "node scripts/sample-giving.js seed",
+    "purge:giving": "node scripts/sample-giving.js purge",
+    "purge:verify": "node scripts/purge-verification-data.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "json2csv": "^6.0.0-alpha.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.1",
+    "pdfkit": "^0.15.2",
+    "pg": "^8.23.0",
+    "qrcode": "^1.5.4",
+    "uuid": "^14.0.2",
+    "web-push": "^3.6.7"
+  }
+}

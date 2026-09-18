@@ -1,0 +1,259 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/*
+ * VRT color system: derived directly from the VRT logo (sampled from
+ * vrt-logo.png): red #A70210 (wordmark top), green #69B201 (ring + wordmark
+ * bottom), warm white/cream disc, on a charcoal-neutral text base.
+ *
+ * Each color has ONE job (applied identically in client-admin and client-pastor):
+ *   cream/ink , dominant surfaces & text (~60-70% of every screen)
+ *   brand red , brand chrome + attention only: logo, active nav, emergencies,
+ *                unread badges (~10-15%). Never a surface fill for content.
+ *   offering  , the offerings/money category: "Record offering", money figures,
+ *                offering chips and chart bars (red family tints).
+ *   people    , the attendance/people category + success states: "Record
+ *                attendance", attendance figures, people chips, bars (green family).
+ *   amber     : warning/pending.  danger: errors only (kept distinct from brand red).
+ */
+@theme {
+  /* ---- Brand red: logo wordmark #A70210 (brand chrome / attention only) ---- */
+  --color-brand-950: #2B0007;
+  --color-brand-900: #3F000B;
+  --color-brand-800: #5E0110;
+  --color-brand-700: #7C0115;
+  --color-brand-600: #A70210; /* exact logo red */
+  --color-brand-500: #C22A36;
+  --color-brand-400: #D9565F;
+  --color-brand-300: #EDA6AB;
+  --color-brand-100: #F8DFE1;
+  --color-brand-50: #FBF0F1;
+
+  /* ---- Offerings / money: the same logo-red family (category color) ---- */
+  --color-offering-800: #7C0115;
+  --color-offering-700: #8F0118;
+  --color-offering-600: #A70210; /* exact logo red */
+  --color-offering-500: #C13A44;
+  --color-offering-400: #D46A6F;
+  --color-offering-300: #EDA9AE;
+  --color-offering-100: #F7D5D8;
+  --color-offering-50: #FBEBEC;
+
+  /* ---- Attendance / people + success: logo ring green #69B201 ---- */
+  --color-people-900: #243D03;
+  --color-people-800: #3E6E00;
+  --color-people-700: #4C8100; /* darkest tint that still passes AA with white text */
+  --color-people-600: #69B201; /* exact logo green: accents/charts, not small text */
+  --color-people-500: #86C94A;
+  --color-people-400: #A8D873;
+  --color-people-300: #C4E39A;
+  --color-people-200: #DCEFC0;
+  --color-people-100: #EAF4D9;
+  --color-people-50: #F4F9EB;
+
+  /* ---- Status (kept distinct from brand red) ---- */
+  --color-amber-800: #92400E; /* warning / pending */
+  --color-amber-700: #B45309;
+  --color-amber-600: #D97706;
+  --color-amber-500: #F59E0B;
+  --color-amber-300: #FCD34D;
+  --color-amber-100: #FEF3C7;
+  --color-amber-50: #FFFBEB;
+
+  --color-danger-700: #B42318; /* error / critical, never used for brand */
+  --color-danger-600: #D92D20;
+  --color-danger-500: #F04438;
+  --color-danger-400: #F97066;
+  --color-danger-300: #FECDCA;
+  --color-danger-200: #FED7D5;
+  --color-danger-100: #FEE4E2;
+  --color-danger-50: #FEF3F2;
+
+  /* ---- Warm neutrals: cream disc from the logo + softened charcoal text ---- */
+  --color-canvas: #F6F2E9; /* page background */
+  --color-paper: #FDFBF6;  /* cards, sheets */
+  --color-cream-300: #E7E0CE;
+  --color-cream-200: #F3EDDF;
+  --color-cream-100: #F8F4EA;
+  --color-cream-50: #FDFBF6;
+
+  --color-ink-900: #201E1A; /* charcoal body text */
+  --color-ink-800: #33302A;
+  --color-ink-700: #4A463F;
+  --color-ink-600: #5F5A50;
+  --color-ink-500: #6E685D;
+  --color-ink-400: #8B857A;
+  --color-ink-300: #B4ADA0;
+  --color-ink-200: #D8D2C4;
+  --color-ink-100: #E9E5DA;
+  --color-ink-50: #F1EEE5;
+
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* ---- Design system: one corner radius, one restrained shadow ----
+   * Same tokens as client-admin: the pastor app reads as "the same app,
+   * calmer", never visually different. */
+  --radius-DEFAULT: 10px;
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+  --radius-3xl: 16px;
+  --radius-4xl: 20px;
+
+  --shadow-2xs: 0 1px 2px 0 rgb(32 30 26 / 0.05);
+  --shadow-xs: 0 1px 3px 0 rgb(32 30 26 / 0.06);
+  --shadow-sm: 0 1px 2px 0 rgb(32 30 26 / 0.05), 0 1px 4px 0 rgb(32 30 26 / 0.04);
+  --shadow: 0 1px 2px 0 rgb(32 30 26 / 0.05), 0 1px 4px 0 rgb(32 30 26 / 0.04);
+  --shadow-md: 0 1px 2px 0 rgb(32 30 26 / 0.05), 0 1px 4px 0 rgb(32 30 26 / 0.04);
+  --shadow-lg: 0 1px 2px 0 rgb(32 30 26 / 0.05), 0 1px 4px 0 rgb(32 30 26 / 0.04);
+  --shadow-xl: 0 1px 2px 0 rgb(32 30 26 / 0.06), 0 2px 8px 0 rgb(32 30 26 / 0.05);
+  --shadow-2xl: 0 2px 6px 0 rgb(32 30 26 / 0.07), 0 4px 14px 0 rgb(32 30 26 / 0.05);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-body);
+    color: var(--color-ink-900);
+    background-color: var(--color-canvas);
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+  /* iOS Safari zooms into any input with font-size < 16px: avoid that. */
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  /* The resting state of anything motion animates, asserted once the animation
+   * would be over (see src/motion.js: useSettled, and the reasoning there).
+   *
+   * WHY !important: Motion positions an element by writing inline styles, and an
+   * inline style normally wins over a class. A renderer that never advances its
+   * animation timeline, a throttled background webview, a phone that has
+   * starved the frame loop, would otherwise leave the element where the
+   * animation STARTED: a confirmation invisible, a notice half off the screen.
+   * An important declaration is the one thing that beats that inline style, so
+   * where a notice rests never depends on a frame having been painted. */
+  .motion-settled {
+    transform: none !important;
+    opacity: 1 !important;
+    height: auto !important;
+  }
+
+  /* Consistent category chips/accent bars used across both apps. */
+  .category-people        { --cat-color: var(--color-people-700);   --cat-soft: var(--color-people-50); }
+  .category-offering      { --cat-color: var(--color-offering-700); --cat-soft: var(--color-offering-50); }
+  .category-offering-deep { --cat-color: var(--color-offering-800); --cat-soft: var(--color-offering-100); }
+  .category-ink           { --cat-color: var(--color-ink-600);      --cat-soft: var(--color-ink-100); }
+  .category-amber         { --cat-color: var(--color-amber-600);    --cat-soft: var(--color-amber-50); }
+  .category-danger        { --cat-color: var(--color-danger-600);   --cat-soft: var(--color-danger-50); }
+  .category-success       { --cat-color: var(--color-people-700);   --cat-soft: var(--color-people-50); }
+
+  .cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 9999px;
+    padding: 0.125rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--cat-color, var(--color-ink-700));
+    background: var(--cat-soft, var(--color-ink-100));
+    white-space: nowrap;
+  }
+  .cat-accent-left {
+    border-left: 4px solid var(--cat-color, var(--color-brand-600));
+  }
+
+  /* Slim, unobtrusive scrollbar for horizontal nav/table strips on mobile. */
+  .scb {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-200) transparent;
+  }
+  .scb::-webkit-scrollbar {
+    height: 4px;
+  }
+  .scb::-webkit-scrollbar-thumb {
+    background: var(--color-ink-200);
+    border-radius: 9999px;
+  }
+  .scb::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Printing a page (receipts, reports): cream document, no app chrome. */
+  @media print {
+    body {
+      background: var(--color-paper) !important;
+    }
+    header, nav {
+      display: none !important;
+    }
+  }
+
+  /* ---- Same shared primitives as client-admin ---- */
+  .tile {
+    border: 1px solid var(--color-ink-200);
+    border-radius: var(--radius-xl);
+    background: var(--color-paper);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-md);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .btn-lg {
+    padding: 0.875rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .btn-primary { background: var(--color-brand-600); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--color-brand-700); }
+  .btn-people { background: var(--color-people-700); color: #fff; }
+  .btn-people:hover:not(:disabled) { background: var(--color-people-600); }
+  .btn-offering { background: var(--color-offering-600); color: #fff; }
+  .btn-offering:hover:not(:disabled) { background: var(--color-offering-700); }
+  .btn-secondary { background: var(--color-paper); color: var(--color-ink-700); border: 1px solid var(--color-ink-200); }
+  .btn-secondary:hover:not(:disabled) { background: var(--color-ink-50); color: var(--color-ink-900); }
+  .btn-ghost { background: transparent; color: var(--color-ink-600); }
+  .btn-ghost:hover:not(:disabled) { background: var(--color-ink-100); color: var(--color-ink-900); }
+  .btn-ink { background: var(--color-ink-800); color: var(--color-cream-50); }
+  .btn-ink:hover:not(:disabled) { background: var(--color-ink-900); }
+
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .bento > * { min-width: 0; }
+}

@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  server-tests:
+    name: Server tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    defaults:
+      run:
+        working-directory: server
+    # The suite is integration-level: every test file creates its own throwaway
+    # Postgres database (see server/test/helpers.js), so CI needs a real server.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vrt_admin
+          POSTGRES_PASSWORD: ezm.LJ4rl
+          POSTGRES_DB: vrt_cms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vrt_admin -d vrt_cms"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+
+      - name: Run regression suite
+        run: npm test
+        env:
+          NODE_ENV: test
+          # Must match the service container above; the suites create and drop
+          # their own databases alongside it.
+          DATABASE_URL: postgresql://vrt_admin:ezm.LJ4rl@localhost:5432/vrt_cms
+
+  clients-build:
+    name: Build ${{ matrix.client }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        client: [client-admin, client-pastor]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.client }}/package-lock.json
+
+      - run: npm ci
+        working-directory: ${{ matrix.client }}
+
+      - run: npm run lint
+        working-directory: ${{ matrix.client }}
+
+      # Component behaviour tests (Vitest + Testing Library). Both clients have
+      # a suite: the admin one covers its interaction rules, the PWA one covers
+      # the shared navigation it shows on phones and wide screens.
+      - name: Run component tests
+        run: npm test
+        working-directory: ${{ matrix.client }}
+
+      - run: npm run build
+        working-directory: ${{ matrix.client }}

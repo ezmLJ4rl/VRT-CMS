@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- The VRT roundel, in the forms a browser actually asks for: favicon.ico
+         holds the tab sizes (16/32/48) and is also what a browser requests
+         unprompted, and the 192px launcher PNG is what "Add to Home Screen"
+         uses. Both come from vrt-logo.png via scripts/make-app-icons.js, so no
+         icon can drift from the brand. -->
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <!-- The app's own name, for the home screen. Relative hrefs resolve
+         against the /admin/ base this app is served from. -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#F6F2E9" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VRT CMS</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
