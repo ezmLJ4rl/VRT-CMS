@@ -254,6 +254,7 @@ export default function Messages() {
         // of value React cannot guarantee is fresh.
         if (seen) setFreshBroadcasts(list.filter((b) => !seen.has(b.id)).map((b) => b.id));
         setConversations({ ...data.conversations, broadcasts: list });
+        setBanner(null);
         // Broadcasts stay unread until the Pastor explicitly opens the item or
         // presses its Mark as read action. Loading this canonical feed is never
         // treated as having read every notification.
@@ -267,9 +268,23 @@ export default function Messages() {
     return () => clearInterval(interval);
   }, [refreshUnread]);
 
+  async function markAllReadIndividually() {
+    const broadcastIds = conversations.broadcasts.flatMap((broadcast) => broadcast.sourceIds || [broadcast.id]);
+    const directMessages = await Promise.all(conversations.threads.map((thread) => api.get(`/messages/${thread.id}`).then(({ data }) => data.messages || []).catch(() => [])));
+    const messageIds = directMessages.flat().filter((message) => !message.read_at).map((message) => message.id);
+    const notifications = await api.get('/notifications').then(({ data }) => data.notifications || []).catch(() => []);
+    await Promise.all([
+      ...broadcastIds.map((id) => api.patch(`/messages/${id}/read`).catch(() => {})),
+      ...messageIds.map((id) => api.patch(`/messages/${id}/read`).catch(() => {})),
+      ...notifications.filter((notification) => !notification.read_at).map((notification) => api.patch(`/notifications/${notification.id}/read`).catch(() => {})),
+    ]);
+  }
+
   async function markAllRead() {
     try {
-      await api.patch('/messages/read-all');
+      // Use the stable per-item endpoints directly. This also works while an
+      // older API instance is still serving traffic during a deployment.
+      await markAllReadIndividually();
       setConversations((prev) => ({
         ...prev,
         broadcasts: prev.broadcasts.map((item) => ({ ...item, read_at: item.read_at || new Date().toISOString() })),

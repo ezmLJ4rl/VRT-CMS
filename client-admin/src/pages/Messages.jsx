@@ -68,6 +68,16 @@ export default function Messages() {
     setLoading(false);
   }, []);
 
+  async function markAllReadIndividually() {
+    const directMessages = await Promise.all(conversations.threads.map((thread) => api.get(`/messages/${thread.id}`).then(({ data }) => data.messages || []).catch(() => [])));
+    const messageIds = directMessages.flat().filter((message) => !message.read_at).map((message) => message.id);
+    const notifications = await api.get('/notifications').then(({ data }) => data.notifications || []).catch(() => []);
+    await Promise.all([
+      ...messageIds.map((id) => api.patch(`/messages/${id}/read`).catch(() => {})),
+      ...notifications.filter((notification) => !notification.read_at).map((notification) => api.patch(`/notifications/${notification.id}/read`).catch(() => {})),
+    ]);
+  }
+
   async function markAllRead() {
     try {
       await api.patch('/messages/read-all');
@@ -78,6 +88,16 @@ export default function Messages() {
       }));
       setBanner({ type: 'success', message: t('messages.allMarkedRead') });
     } catch (err) {
+      if ([404, 405].includes(err?.response?.status)) {
+        await markAllReadIndividually();
+        setConversations((prev) => ({
+          ...prev,
+          threads: prev.threads.map((thread) => ({ ...thread, unread: 0 })),
+          broadcasts: prev.broadcasts.map((broadcast) => ({ ...broadcast, read_at: broadcast.read_at || new Date().toISOString() })),
+        }));
+        setBanner({ type: 'success', message: t('messages.allMarkedRead') });
+        return;
+      }
       setBanner({ type: 'error', message: apiErrorMessage(err, t('messages.markReadFailed')) });
     }
   }
