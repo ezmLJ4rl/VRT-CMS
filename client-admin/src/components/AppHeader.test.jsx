@@ -32,7 +32,7 @@ vi.mock('../api', () => ({
 // front desk runs it, and an admin reaches the same records through Admin.
 const BAR_LINKS = ['Admin', 'Members', 'Messages', 'Emergencies', 'Settings'];
 const CLUSTERS = {
-  Manage: ['Service types', 'Groups', 'Centers', 'Special Projects', 'Events'],
+  Manage: ['Service types', 'Groups', 'Centers', 'Appointments', 'Special Projects', 'Events'],
   Finance: ['Reports', 'Reconciliation', 'Receipts'],
 };
 const DRAWER_SECTIONS = {
@@ -49,7 +49,7 @@ const DRAWER_LABELS = [
 ];
 
 const SW_BAR_LINKS = ['Msimamizi', 'Wanachama', 'Ujumbe', 'Dharura', 'Mipangilio'];
-const SW_CLUSTER_ITEMS = ['Aina za ibada', 'Vikundi', 'Vituo', 'Miradi Maalum', 'Matukio'];
+const SW_CLUSTER_ITEMS = ['Aina za ibada', 'Vikundi', 'Vituo', 'Miadi', 'Miradi Maalum', 'Matukio'];
 
 /** The destinations a role may reach, in the order the drawer shows them. */
 const destinationsFor = (role = 'superadmin') =>
@@ -518,6 +518,7 @@ describe('AppHeader navigation: desktop bar', () => {
     expect(within(menu('manage')).getAllByRole('link').map((l) => l.textContent)).toEqual([
       'Groups',
       'Centers',
+      'Appointments',
     ]);
     expect(within(menu('manage')).getByRole('link', { name: 'Groups' })).toHaveAttribute(
       'href',

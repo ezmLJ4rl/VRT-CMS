@@ -5,6 +5,7 @@ import api, { apiErrorMessage } from '../api';
 import StatusBanner from './StatusBanner';
 import GroupLogo from './GroupLogo';
 import MemberProfile from './MemberProfile';
+import MemberLink from './MemberLink';
 import { leadersWithRoles, zoneMismatch } from '../zoneRoles';
 
 // The roster is a read, never a write: every member field is registered and
@@ -237,7 +238,7 @@ export default function CenterRoster({ centerId, memberCount, zones = [] }) {
                         <UserRound size={14} className="mt-0.5 shrink-0 text-ink-400" />
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span className="font-display text-sm font-semibold text-ink-900">{m.name}</span>
+                            <MemberLink memberId={m.id} className="font-display text-sm font-semibold text-ink-900">{m.name}</MemberLink>
                             <span className="cat-chip category-people">{m.member_no}</span>
                             {!m.is_active && <span className="cat-chip category-amber">{t('members.inactive')}</span>}
                           </span>

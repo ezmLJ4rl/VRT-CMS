@@ -14,6 +14,7 @@ import BarChart from '../components/BarChart';
 import TrendChart from '../components/TrendChart';
 import { STATUS_TONE, money, daysLabel, contributorSeries, giverLabel } from '../projectView';
 import { EMPTY_VALUE } from '../emptyValue';
+import MemberLink from '../components/MemberLink';
 
 /*
  * One project's progress page.
@@ -300,7 +301,9 @@ export default function ProjectDetail() {
                       {c.giverNameUnavailable ? (
                         <span className="font-medium text-amber-700">{t('common.nameUnavailable')}</span>
                       ) : (
-                        giverLabel(c, t)
+                        <MemberLink memberId={c.memberId} className="text-ink-900">
+                          {giverLabel(c, t)}
+                        </MemberLink>
                       )}
                       {c.memberName && <span className="ml-1.5 text-xs text-ink-400">{t('projects.memberTag')}</span>}
                     </span>
@@ -332,7 +335,9 @@ export default function ProjectDetail() {
               {contributors.slice(0, 8).map((c) => (
                 <li key={c.key} className="flex items-center justify-between gap-3 border-b border-ink-100 pb-2 last:border-0">
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-ink-900">{c.name || t('common.anonymous')}</span>
+                    <span className="block truncate text-sm font-medium text-ink-900">
+                      {c.memberId ? <MemberLink memberId={c.memberId}>{c.name || t('common.anonymous')}</MemberLink> : (c.name || t('common.anonymous'))}
+                    </span>
                     <span className="text-xs text-ink-400">{t('projects.givenTimes', { n: c.times })}</span>
                   </span>
                   <span className="shrink-0 text-sm font-semibold tabular-nums text-offering-700">{money(c.total, cur)}</span>
@@ -363,7 +368,13 @@ export default function ProjectDetail() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium text-ink-900">
-                      {p.pledgeNameUnavailable ? <span className="text-amber-700">{t('common.nameUnavailable')}</span> : p.pledgeName || p.memberName || EMPTY_VALUE}
+                      {p.pledgeNameUnavailable ? (
+                        <span className="text-amber-700">{t('common.nameUnavailable')}</span>
+                      ) : p.memberName ? (
+                        <MemberLink memberId={p.memberId}>{p.pledgeName || p.memberName}</MemberLink>
+                      ) : (
+                        p.pledgeName || EMPTY_VALUE
+                      )}
                       {p.memberName && <span className="ml-1.5 text-xs text-ink-400">{p.memberName}</span>}
                     </p>
                     <p className="text-xs text-ink-500">

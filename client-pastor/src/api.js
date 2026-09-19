@@ -2,6 +2,14 @@ import axios from 'axios';
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api' });
 
+// Request config fields the interceptors own. A request carrying
+// `_skipAuthRedirect` (the deliberate logout) must never leak onto the wire.
+// A request carrying the `X-Skip-Auth-Redirect` header (the deliberate
+// logout) is the CLIENT signing itself out, so a 401 answer to it is expected
+// and must not be re-handled as an expired session. A header, not a custom
+// config field, because axios guarantees headers survive onto err.config.
+const SKIP_AUTH_REDIRECT_HEADER = 'X-Skip-Auth-Redirect';
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('vrt_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -23,13 +31,18 @@ api.interceptors.response.use(
   },
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('vrt_token');
-      localStorage.removeItem('vrt_user');
-      // Flag the expiry so the login screen can explain WHY the user is there
-      // ("session expired") instead of showing a bare login form.
-      localStorage.setItem('vrt_session_expired', '1');
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login';
+      // A deliberate logout clears its own token; a 401 from the API itself is
+      // an expired/revoked session and clears the credential + explains why.
+      const skipRedirect = !!err.config?.headers?.[SKIP_AUTH_REDIRECT_HEADER];
+      if (!skipRedirect) {
+        localStorage.removeItem('vrt_token');
+        localStorage.removeItem('vrt_user');
+        // Flag the expiry so the login screen can explain WHY the user is there
+        // ("session expired") instead of showing a bare login form.
+        localStorage.setItem('vrt_session_expired', '1');
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(err);

@@ -27,7 +27,7 @@ const tabs = () => document.getElementById('app-nav-tabs');
 const bar = () => document.getElementById('app-nav-bar');
 const linkIn = (nav, label) => within(nav).getByRole('link', { name: new RegExp(label) });
 
-const EN_LABELS = ['Home', 'Records', 'Alerts', 'Events', 'Messages', 'Special Projects', 'More'];
+const EN_LABELS = ['Home', 'Records', 'Alerts', 'Events', 'Messages', 'Appointments', 'Special Projects', 'More'];
 
 beforeEach(async () => {
   await i18n.changeLanguage('en');
@@ -141,6 +141,7 @@ describe('Pastor nav: language', () => {
         'Arifa',
         'Matukio',
         'Ujumbe',
+        'Miadi',
         'Miradi Maalum',
         'Zaidi',
       ]);

@@ -7,6 +7,7 @@ export default function VrtLogo({ size = 40, className = '', withWordmark = fals
       <img
         src={src}
         alt="Victory Revival Temple"
+        className="rounded-2xl"
         width={size}
         height={size}
         style={{ width: size, height: size, objectFit: 'contain' }}

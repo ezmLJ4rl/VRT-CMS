@@ -40,9 +40,21 @@ function passwordFingerprint(passwordHash) {
   return crypto.createHash('sha256').update(String(passwordHash)).digest('hex').slice(0, 16);
 }
 
-function signToken(user) {
+/**
+ * The identity of ONE device's session.
+ *
+ * Every login mints its own random `sid` and every renewal preserves it, so
+ * concurrent devices each carry their own revocable identity while remaining
+ * fully independent: a token for session A never becomes a token for session B.
+ * The id is random, so it cannot be guessed from a user id or a timestamp.
+ */
+function newSessionId() {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+function signToken(user, sessionId) {
   return jwt.sign(
-    { sub: user.id, role: user.role, pv: passwordFingerprint(user.password_hash) },
+    { sub: user.id, role: user.role, pv: passwordFingerprint(user.password_hash), sid: sessionId },
     process.env.JWT_SECRET,
     { expiresIn: expiresIn() }
   );
@@ -60,6 +72,8 @@ function tokenMatchesPassword(payload, user) {
 /**
  * Sliding renewal. Re-issues the token once it is past half its lifetime and
  * exposes the replacement in a response header; a fresh token is a no-op.
+ * The session id is PRESERVED, so renewal never turns one device's session
+ * into another's, and never resurrects a session that was revoked mid-life.
  * Returns the new token, or null when nothing was renewed.
  */
 function refreshIfAged(res, payload, user) {
@@ -68,7 +82,7 @@ function refreshIfAged(res, payload, user) {
   const age = Math.floor(Date.now() / 1000) - payload.iat;
   if (lifetime <= 0 || age < lifetime / 2) return null;
 
-  const token = signToken(user);
+  const token = signToken(user, payload.sid);
   res.setHeader(REFRESH_HEADER, token);
   return token;
 }
@@ -77,6 +91,7 @@ module.exports = {
   DEFAULT_EXPIRES_IN,
   REFRESH_HEADER,
   expiresIn,
+  newSessionId,
   passwordFingerprint,
   refreshIfAged,
   signToken,

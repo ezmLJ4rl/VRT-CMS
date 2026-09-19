@@ -16,6 +16,7 @@ import Events from './pages/Events';
 import Settings from './pages/Settings';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
+import Appointments from './pages/Appointments';
 
 function RootRedirect() {
   const { user, loading } = useAuth();
@@ -36,6 +37,7 @@ function ShellRoutes() {
         <Route path="/records" element={<Records />} />
         <Route path="/emergencies" element={<Emergencies />} />
         <Route path="/messages" element={<Messages />} />
+        <Route path="/appointments" element={<Appointments />} />
         {/* Where a group update points: the group's live membership, read from
             the group's own records rather than from the message that announced
             the change. Not a tab of its own: the pastor reaches it from the

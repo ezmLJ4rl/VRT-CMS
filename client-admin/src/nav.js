@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   CalendarDays,
+  CalendarClock,
   ChartColumn,
   Church,
   ClipboardCheck,
@@ -63,6 +64,7 @@ export const NAV_BY_ROLE = {
     // admin does: the same words in the same place, whoever is signed in.
     { to: '/groups', key: 'groups', Icon: UsersRound, group: 'manage' },
     { to: '/centers', key: 'centers', Icon: MapPin, group: 'manage' },
+    { to: '/appointments', key: 'appointments', Icon: CalendarClock, group: 'manage' },
     // The front desk pulls records (a service's offering total, a period's
     // giving) but never reconciles or revokes: money screens stay admin-only.
     { to: '/reports', key: 'reports', Icon: ChartColumn, group: 'finance' },
@@ -80,6 +82,7 @@ export const NAV_BY_ROLE = {
     { to: '/members', key: 'members', Icon: Users, group: 'primary' },
     { to: '/groups', key: 'groups', Icon: UsersRound, group: 'manage' },
     { to: '/centers', key: 'centers', Icon: MapPin, group: 'manage' },
+    { to: '/appointments', key: 'appointments', Icon: CalendarClock, group: 'manage' },
     // Fundraising sits after the people sections: a project is a record with a
     // goal and a ledger, and it is administered by whoever runs the church.
     { to: '/projects', key: 'projects', Icon: Target, group: 'manage' },
@@ -106,6 +109,7 @@ export const NAV_BY_ROLE = {
     { to: '/members', key: 'members', Icon: Users, group: 'primary' },
     { to: '/groups', key: 'groups', Icon: UsersRound, group: 'manage' },
     { to: '/centers', key: 'centers', Icon: MapPin, group: 'manage' },
+    { to: '/appointments', key: 'appointments', Icon: CalendarClock, group: 'manage' },
     { to: '/projects', key: 'projects', Icon: Target, group: 'manage' },
     { to: '/events', key: 'events', Icon: CalendarDays, group: 'manage' },
     { to: '/messages', key: 'messages', Icon: MessageSquare, group: 'primary' },

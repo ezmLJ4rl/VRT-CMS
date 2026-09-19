@@ -270,6 +270,51 @@ describe('special projects', () => {
     assert.deepEqual(after.otherCurrencies, [{ currency: 'USD', raised: 200, pledged: 0, spent: 0, owed: 0 }]);
   });
 
+  it('only links Special Project offerings and blocks contributions to closed projects', async () => {
+    const id = await newProject({ name: 'Contribution Rules Project' });
+
+    const wrongCategory = await suite.api('POST', '/api/offerings', adminToken, {
+      serviceTypeId: sundayId, date: today, category: 'zaka', amount: 1000, currency: 'TZS', projectId: id, offererName: 'Test giver',
+    });
+    assert.equal(wrongCategory.status, 400);
+    assert.equal(wrongCategory.json.error, 'Only Special Project offerings can be linked to a project.');
+
+    await suite.api('PATCH', `/api/projects/${id}`, adminToken, { status: 'completed' });
+    const closed = await suite.api('POST', '/api/offerings', adminToken, {
+      serviceTypeId: sundayId, date: today, category: 'special', amount: 1000, currency: 'TZS', projectId: id,
+    });
+    assert.equal(closed.status, 400);
+    assert.equal(closed.json.error, 'This project is not accepting new contributions.');
+  });
+
+  it('locks the project currency once financial records exist', async () => {
+    const id = await newProject({ name: 'Currency Lock Project', currency: 'TZS' });
+    const gift = await suite.api('POST', '/api/offerings', adminToken, {
+      serviceTypeId: sundayId, date: today, category: 'special', amount: 1000, currency: 'TZS', projectId: id,
+    });
+    assert.equal(gift.status, 201, gift.text);
+    const changed = await suite.api('PATCH', `/api/projects/${id}`, adminToken, { currency: 'USD' });
+    assert.equal(changed.status, 409);
+    assert.equal(changed.json.error, 'A project currency cannot be changed after financial records exist.');
+  });
+
+  it('rejects inconsistent initial pledge fulfilment and protects paid history', async () => {
+    const id = await newProject({ name: 'Pledge Integrity Project' });
+    const invalid = await suite.api('POST', `/api/projects/${id}/pledges`, adminToken, {
+      name: 'Neema Joseph', amount: 1000, fulfilledAmount: 1001,
+    });
+    assert.equal(invalid.status, 400);
+    assert.equal(invalid.json.error, 'A pledge cannot be fulfilled by more than the amount pledged.');
+
+    const debt = await suite.api('POST', `/api/projects/${id}/debts`, adminToken, {
+      description: 'Paid materials', amount: 1000, status: 'paid',
+    });
+    assert.equal(debt.status, 201, debt.text);
+    const removed = await suite.api('DELETE', `/api/projects/${id}/debts/${debt.json.id}`, adminToken);
+    assert.equal(removed.status, 409);
+    assert.equal(removed.json.error, 'A paid debt cannot be removed; keep it for the financial history.');
+  });
+
   it('lists projects with progress, active first', async () => {
     const { status, json } = await suite.api('GET', '/api/projects', adminToken);
     assert.equal(status, 200, json && json.error);

@@ -1,19 +1,62 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Download, Bell, BellOff } from 'lucide-react';
+import { LogOut, Download, Bell, BellOff, MonitorSmartphone } from 'lucide-react';
+import api, { apiErrorMessage } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { CHURCH_NAME, CHURCH_ADDRESS } from '../i18n/common';
 import { getPushSupportState, enablePushNotifications, disablePushNotifications } from '../push';
 import StatusBanner from '../components/StatusBanner';
+import { formatDateTime } from '../format';
 
 export default function Settings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [pushState, setPushState] = useState('default');
   const [pushError, setPushError] = useState('');
   const [installPrompt, setInstallPrompt] = useState(null);
+  // The account's signed-in devices, read from the server's session records:
+  // which places are signed in, which one is THIS device, and ending any other
+  // one (a lost phone) or all of them from here.
+  const [sessions, setSessions] = useState(null);
+  const [devicesError, setDevicesError] = useState('');
+  const [signingOutAll, setSigningOutAll] = useState(false);
+
+  function loadSessions() {
+    api
+      .get('/auth/sessions')
+      .then(({ data }) => setSessions(data.sessions.filter((s) => !s.revoked)))
+      .catch((err) => setDevicesError(apiErrorMessage(err)));
+  }
+
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
+  async function revokeSession(sid) {
+    setDevicesError('');
+    try {
+      await api.post(`/auth/sessions/${sid}/revoke`);
+      loadSessions();
+    } catch (err) {
+      setDevicesError(apiErrorMessage(err));
+    }
+  }
+
+  async function signOutAllDevices() {
+    if (!window.confirm(t('settings.signOutAllConfirm'))) return;
+    setSigningOutAll(true);
+    setDevicesError('');
+    try {
+      await api.post('/auth/logout-all');
+      await logout();
+      navigate('/login');
+    } catch (err) {
+      setDevicesError(apiErrorMessage(err));
+      setSigningOutAll(false);
+    }
+  }
 
   useEffect(() => {
     setPushState(getPushSupportState());
@@ -48,8 +91,9 @@ export default function Settings() {
     setInstallPrompt(null);
   }
 
-  function handleLogout() {
-    logout();
+  // Waits for the server to revoke THIS device's session before leaving.
+  async function handleLogout() {
+    await logout();
     navigate('/login');
   }
 
@@ -104,6 +148,53 @@ export default function Settings() {
       <div className="rounded-xl border border-ink-200 bg-paper p-4">
         <p className="text-sm font-medium text-ink-900">{CHURCH_NAME}</p>
         <p className="text-xs text-ink-400">{CHURCH_ADDRESS}</p>
+      </div>
+
+      {/* Signed-in devices: the account can be signed in on several at once
+          (a laptop at the office, this phone), and each one is managed
+          independently. Ending another device never touches this one. */}
+      <div className="rounded-xl border border-ink-200 bg-paper p-4">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-medium text-ink-900">
+          <MonitorSmartphone size={15} aria-hidden="true" className="text-ink-500" /> {t('settings.devices')}
+        </h2>
+        <p className="mb-3 text-xs text-ink-400">{t('settings.devicesHelp')}</p>
+        {devicesError && <StatusBanner type="error" message={devicesError} />}
+        {sessions === null && !devicesError && <p className="py-2 text-sm text-ink-400">{t('common.loading')}</p>}
+        {sessions && (
+          <ul className="divide-y divide-ink-100">
+            {sessions.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium text-ink-900">
+                      {s.current ? t('settings.deviceThisDevice') : `${t('settings.device')} ${s.id.slice(0, 8)}`}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ink-400">
+                    {t('settings.deviceLastActive', { when: formatDateTime(s.lastActiveAt, i18n.language) })}
+                  </span>
+                </span>
+                {!s.current && (
+                  <button
+                    type="button"
+                    onClick={() => revokeSession(s.id)}
+                    className="shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium text-ink-600 hover:bg-danger-50 hover:text-danger-700"
+                  >
+                    {t('settings.signOutElsewhere')}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <button
+          type="button"
+          onClick={signOutAllDevices}
+          disabled={signingOutAll}
+          className="mt-3 w-full rounded-md border border-ink-200 px-4 py-2.5 text-sm font-medium text-ink-700 hover:border-danger-400 hover:text-danger-700 disabled:opacity-50"
+        >
+          {t('settings.signOutAllDevices')}
+        </button>
       </div>
 
       <button

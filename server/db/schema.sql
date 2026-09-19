@@ -69,6 +69,25 @@ CREATE TABLE IF NOT EXISTS notifications_log (
   message_id INTEGER
 );
 
+-- One row per authenticated device/session. Sessions are independent: each
+-- login creates its own row (and its own `sid` claim in the JWT), so one user
+-- can be signed in from a laptop, a phone and a tablet at once, and logging out
+-- of one device revokes exactly that device's row. The token's own lifetime is
+-- the session lifetime; the row only answers "is this session still live?".
+-- `last_active_at` is stamped by the auth middleware on every authenticated
+-- request, so the list shows which devices are really in use. Revoked rows are
+-- kept (with a timestamp) for the audit story rather than deleted.
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  sid TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+  last_active_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+  revoked_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_sid ON user_sessions(sid);
+
 -- Tamper-evident audit log hash-chained to the previous row.
 CREATE TABLE IF NOT EXISTS audit_log (
   id SERIAL PRIMARY KEY,
@@ -289,7 +308,7 @@ CREATE TABLE IF NOT EXISTS messages (
   id SERIAL PRIMARY KEY,
   sender_id INTEGER NOT NULL REFERENCES users(id),
   recipient_role TEXT NOT NULL CHECK (recipient_role IN ('pastor','receptionist','admin','superadmin')),
-  category TEXT NOT NULL DEFAULT 'general' CHECK (category IN ('attendance','offering','member_alert','event','general')),
+  category TEXT NOT NULL DEFAULT 'general' CHECK (category IN ('attendance','offering','member_alert','event','appointment','general')),
   subject TEXT NOT NULL,
   body TEXT,
   payload TEXT,
@@ -304,6 +323,26 @@ CREATE TABLE IF NOT EXISTS messages (
   recalled_at TEXT,
   recalled_by INTEGER REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS appointments (
+  id SERIAL PRIMARY KEY,
+  requested_by INTEGER NOT NULL REFERENCES users(id),
+  pastor_id INTEGER NOT NULL REFERENCES users(id),
+  requested_date TEXT NOT NULL,
+  requested_time TEXT NOT NULL,
+  duration_minutes INTEGER,
+  purpose TEXT NOT NULL,
+  requester_notes TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','declined','rescheduled','completed','cancelled')),
+  proposed_date TEXT,
+  proposed_time TEXT,
+  pastor_notes TEXT,
+  created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+  updated_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+);
+CREATE INDEX IF NOT EXISTS idx_appointments_requested_by ON appointments(requested_by);
+CREATE INDEX IF NOT EXISTS idx_appointments_pastor_status ON appointments(pastor_id, status);
+CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(requested_date);
 
 CREATE TABLE IF NOT EXISTS events (
   id SERIAL PRIMARY KEY,
@@ -400,13 +439,17 @@ CREATE TABLE IF NOT EXISTS projects (
   name TEXT NOT NULL,
   description TEXT,
   status TEXT NOT NULL DEFAULT 'active',       -- active | on_hold | completed
+  -- Only active projects accept new contributions. on_hold and completed retain
+  -- historical data but cannot receive new money through either entry path.
   started_on TEXT,
   target_on TEXT,
   goal_amount REAL NOT NULL DEFAULT 0,
   currency TEXT NOT NULL DEFAULT 'TZS',
   created_by INTEGER REFERENCES users(id),
   created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
-  updated_at TEXT
+  updated_at TEXT,
+  CONSTRAINT projects_status_check CHECK (status IN ('active', 'on_hold', 'completed')),
+  CONSTRAINT projects_goal_amount_check CHECK (goal_amount >= 0)
 );
 
 -- A pledge is money promised, not money received: pledged amount and fulfilled
@@ -423,7 +466,9 @@ CREATE TABLE IF NOT EXISTS project_pledges (
   status TEXT NOT NULL DEFAULT 'open',         -- open | fulfilled | cancelled
   notes TEXT,
   created_by INTEGER REFERENCES users(id),
-  created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+  created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+  CONSTRAINT project_pledges_status_check CHECK (status IN ('open', 'fulfilled', 'cancelled')),
+  CONSTRAINT project_pledges_amount_check CHECK (amount > 0 AND fulfilled_amount >= 0 AND fulfilled_amount <= amount)
 );
 
 -- What the project owes. A `paid` row is money already spent, an `outstanding`
@@ -440,7 +485,9 @@ CREATE TABLE IF NOT EXISTS project_debts (
   paid_on TEXT,
   notes TEXT,
   created_by INTEGER REFERENCES users(id),
-  created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+  created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+  CONSTRAINT project_debts_status_check CHECK (status IN ('outstanding', 'paid')),
+  CONSTRAINT project_debts_amount_check CHECK (amount > 0)
 );
 
 -- Which project an offering funds. NULL = not a project gift (every zaka,

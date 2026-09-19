@@ -9,6 +9,7 @@ import DataTable from '../components/DataTable';
 import StatusBanner from '../components/StatusBanner';
 import { paymentMethodLabel } from '../paymentMethods';
 import { EMPTY_VALUE } from '../emptyValue';
+import MemberLink from '../components/MemberLink';
 
 /*
  * Receipts & verification: the administrative side of the QR code printed on
@@ -389,7 +390,11 @@ export default function Receipts() {
       ),
     },
     { key: 'date', header: t('receipts.colDate'), width: 13, render: (r) => <span className="text-ink-600">{r.service_date}</span> },
-    { key: 'giver', header: t('receipts.colGiver'), width: 18, render: (r) => <span className="text-ink-600">{r.offererName || t('common.anonymous')}</span> },
+    { key: 'giver', header: t('receipts.colGiver'), width: 18, render: (r) => (
+      r.member_id || r.memberId
+        ? <MemberLink memberId={r.member_id || r.memberId}>{r.offererName || t('common.anonymous')}</MemberLink>
+        : <span className="text-ink-600">{r.offererName || t('common.anonymous')}</span>
+    ) },
     { key: 'category', header: t('receipts.colCategory'), width: 16, render: (r) => <span className="text-ink-600">{r.category_name || r.category_key || EMPTY_VALUE}</span> },
     {
       key: 'amount',

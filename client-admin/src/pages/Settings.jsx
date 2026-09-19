@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Save, Trash2, UserPlus, X } from 'lucide-react';
+import { MonitorSmartphone, Pencil, Save, Trash2, UserPlus, X } from 'lucide-react';
 import api, { apiErrorMessage } from '../api';
 import AppShell from '../components/AppShell';
 import DataTable from '../components/DataTable';
 import StatusBanner from '../components/StatusBanner';
 import { useAuth } from '../context/AuthContext';
 import { CHURCH_NAME, CHURCH_ADDRESS } from '../i18n/common';
+import { formatDateTime } from '../format';
 
 const ROLES = ['receptionist', 'admin', 'pastor', 'superadmin'];
 
@@ -37,6 +38,37 @@ export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // The signed-in devices of THIS account (from the server's session records):
+  // sign out a lost phone, or everything at once. Ending another device never
+  // touches the session this page is running in.
+  const [sessions, setSessions] = useState(null);
+  const [devicesError, setDevicesError] = useState('');
+  const [revokingId, setRevokingId] = useState(null);
+
+  function loadSessions() {
+    api
+      .get('/auth/sessions')
+      .then(({ data }) => setSessions(data.sessions.filter((s) => !s.revoked)))
+      .catch((err) => setDevicesError(apiErrorMessage(err)));
+  }
+
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
+  async function revokeSession(sid) {
+    setRevokingId(sid);
+    setDevicesError('');
+    try {
+      await api.post(`/auth/sessions/${sid}/revoke`);
+      loadSessions();
+    } catch (err) {
+      setDevicesError(apiErrorMessage(err));
+    } finally {
+      setRevokingId(null);
+    }
+  }
 
   useEffect(() => {
     if (isSuperadmin) loadUsers();
@@ -186,6 +218,49 @@ export default function Settings() {
           <StatusBanner type={banner.type} message={banner.message} />
         </div>
       )}
+
+      {/* Signed-in devices: the account can be signed in on several at once and
+          each one is ended independently, without touching this session. */}
+      <section className="mt-6 rounded-xl border border-ink-200 bg-paper p-5 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 font-display text-lg font-semibold">
+          <MonitorSmartphone size={17} aria-hidden="true" className="text-ink-500" /> {t('settings.devices')}
+        </h2>
+        <p className="mb-4 text-sm text-ink-500">{t('settings.devicesHelp')}</p>
+        {devicesError && (
+          <div className="mb-3">
+            <StatusBanner type="error" message={devicesError} />
+          </div>
+        )}
+        {sessions === null && !devicesError && <p className="py-3 text-sm text-ink-400">{t('common.loading')}</p>}
+        {sessions && (
+          <ul className="divide-y divide-ink-100">
+            {sessions.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium text-ink-900">
+                      {s.current ? t('settings.deviceThisDevice') : `${t('settings.device')} ${s.id.slice(0, 8)}`}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ink-400">
+                    {t('settings.deviceLastActive', { when: formatDateTime(s.lastActiveAt, i18n.language) })}
+                  </span>
+                </span>
+                {!s.current && (
+                  <button
+                    type="button"
+                    onClick={() => revokeSession(s.id)}
+                    disabled={revokingId === s.id}
+                    className="btn btn-secondary"
+                  >
+                    {t('settings.signOutElsewhere')}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-ink-200 bg-paper p-5 shadow-sm">

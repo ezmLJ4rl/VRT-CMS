@@ -1,28 +1,44 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { UserRound } from 'lucide-react';
 import VrtLogo from './VrtLogo';
 import CountBadge from './CountBadge';
 import LanguageSwitcher from './LanguageSwitcher';
+import { useAuth } from '../context/AuthContext';
 import { CHURCH_NAME } from '../i18n/common';
 import { TABS, BADGE_TONE } from '../nav';
 
 export default function AppShell({ children, openEmergencyCount = 0, openMessageCount = 0 }) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const counts = { emergencies: openEmergencyCount, messages: openMessageCount };
 
   return (
     <div className="flex min-h-screen flex-col bg-ink-50 text-ink-900">
       <header
-        className="sticky top-0 z-10 border-b border-ink-200 bg-paper"
+        className="sticky top-0 z-50 border-b border-ink-200 bg-paper"
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
       >
         <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-4 pb-3">
           <VrtLogo size={32} className="shrink-0" />
           <h1 className="min-w-0 truncate font-display text-base font-semibold tracking-tight text-ink-900">{CHURCH_NAME}</h1>
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {/* Decorative brand accent; dropped on phones so the language
-                switcher, which is functional: keeps its room. */}
-            <span className="hidden h-1 w-10 rounded-full bg-gradient-to-r from-brand-600 to-people-600 lg:block" />
+          <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+            {/* The signed-in account, replacing the old decorative gradient
+                strip: the one fact the header could not answer. The name is
+                hidden on phones (the role pill stays) so the functional
+                language switcher keeps its room. */}
+            {user && (
+              <span
+                className="hidden min-w-0 items-center gap-1.5 rounded-md border border-ink-200 bg-ink-50/60 py-1 pl-2.5 pr-2 md:flex"
+                title={user.email}
+              >
+                <UserRound size={14} aria-hidden="true" className="shrink-0 text-ink-500" />
+                <span className="min-w-0 max-w-[10rem] truncate text-sm font-medium text-ink-800">{user.name}</span>
+                <span className="hidden shrink-0 rounded bg-ink-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500 lg:inline">
+                  {t(`settings.role_${user.role}`, user.role)}
+                </span>
+              </span>
+            )}
             <LanguageSwitcher />
           </div>
         </div>

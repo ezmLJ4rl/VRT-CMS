@@ -4,7 +4,7 @@ const rateLimit = require('express-rate-limit');
 const pool = require('../db/pg');
 const { logAudit } = require('../utils/audit');
 const { authenticate } = require('../middleware/auth');
-const { REFRESH_HEADER, signToken } = require('../utils/token');
+const { REFRESH_HEADER, signToken, newSessionId } = require('../utils/token');
 
 const router = express.Router();
 
@@ -124,9 +124,16 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     clearFailures(key);
 
-    const token = signToken(user);
-    await logAudit({ userId: user.id, action: 'login_success', table: 'users', recordId: user.id, ip: req.ip });
-    res.json({ token, user: safeUser(user) });
+    // One server-side session record per device. The JWT carries this id as its
+    // `sid` claim, so every device holds an independently revocable session and
+    // logging in from a new device never disturbs the sessions already open.
+    // Token lifetime IS the session lifetime: no separate expiry to keep in step.
+    const sid = newSessionId();
+    await pool.query('INSERT INTO user_sessions (user_id, sid) VALUES ($1, $2)', [user.id, sid]);
+
+    const token = signToken(user, sid);
+    await logAudit({ userId: user.id, action: 'login_success', table: 'users', recordId: user.id, details: { sessionId: sid }, ip: req.ip });
+    res.json({ token, sessionId: sid, user: safeUser(user) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'errors.failedSignTryAgain' });
@@ -135,7 +142,90 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 // GET /api/auth/me
 router.get('/me', authenticate, (req, res) => {
-  res.json({ user: safeUser(req.user) });
+  res.json({ user: safeUser(req.user), sessionId: req.sessionId || null });
+});
+
+// ---------------------------------------------------------------- sessions
+
+// GET /api/auth/sessions: this account's signed-in devices, newest activity
+// first. Returns only what a user needs to recognise a device: no tokens, no
+// hashes. `current` marks the session making the request.
+router.get('/sessions', authenticate, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT sid, last_active_at
+         FROM user_sessions
+        WHERE user_id = $1 AND revoked_at IS NULL
+        ORDER BY (sid = $2) DESC, last_active_at DESC, id DESC`,
+      [req.user.id, req.sessionId || '']
+    );
+    res.json({
+      sessions: rows.map((r) => ({
+        id: r.sid,
+        lastActiveAt: r.last_active_at,
+        current: req.sessionId ? r.sid === req.sessionId : false,
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'errors.failedLoadSessions' });
+  }
+});
+
+// POST /api/auth/logout: end THIS device's session only. Every other signed-in
+// device of the same account keeps working — that is the whole point of
+// per-session identity. Idempotent: an already-revoked session stays revoked.
+router.post('/logout', authenticate, async (req, res) => {
+  try {
+    if (req.sessionId) {
+      await pool.query(
+        "UPDATE user_sessions SET revoked_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS') WHERE sid = $1 AND user_id = $2 AND revoked_at IS NULL",
+        [req.sessionId, req.user.id]
+      );
+      await logAudit({ userId: req.user.id, action: 'logout', table: 'user_sessions', recordId: null, details: { sessionId: req.sessionId }, ip: req.ip });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'errors.failedLogout' });
+  }
+});
+
+// POST /api/auth/logout-all: revoke every active session of this account,
+// including the device making the request (which clears its own token).
+router.post('/logout-all', authenticate, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      "UPDATE user_sessions SET revoked_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS') WHERE user_id = $1 AND revoked_at IS NULL",
+      [req.user.id]
+    );
+    await logAudit({ userId: req.user.id, action: 'logout_all', table: 'user_sessions', recordId: null, details: { revoked: rowCount }, ip: req.ip });
+    res.json({ success: true, revoked: rowCount });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'errors.failedLogout' });
+  }
+});
+
+// POST /api/auth/sessions/:sid/revoke: end one OTHER device's session (for
+// example a lost phone). Refuses the current session so the dedicated logout
+// action stays the only way to end it, keeping the two operations distinct.
+router.post('/sessions/:sid/revoke', authenticate, async (req, res) => {
+  try {
+    if (req.sessionId && req.params.sid === req.sessionId) {
+      return res.status(400).json({ error: 'errors.cannotRevokeCurrentSession' });
+    }
+    const { rowCount } = await pool.query(
+      "UPDATE user_sessions SET revoked_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS') WHERE sid = $1 AND user_id = $2 AND revoked_at IS NULL",
+      [req.params.sid, req.user.id]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'errors.sessionNotFound' });
+    await logAudit({ userId: req.user.id, action: 'session_revoked', table: 'user_sessions', recordId: null, details: { sessionId: req.params.sid }, ip: req.ip });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'errors.failedLogout' });
+  }
 });
 
 // POST /api/auth/change-password
@@ -153,11 +243,16 @@ router.post('/change-password', authenticate, async (req, res) => {
       [hash, req.user.id]
     );
     await logAudit({ userId: req.user.id, action: 'password_changed', table: 'users', recordId: req.user.id });
-    // The new password invalidates every token minted against the old one:
-    // including this device's, which would sign the user out of the session they
-    // are standing in. Hand back a freshly minted one in the standard refresh
-    // header so only the other devices are logged out.
-    res.setHeader(REFRESH_HEADER, signToken(rows[0]));
+    // Every OTHER device is signed out twice over: its token fails the password
+    // fingerprint, and its session row is revoked so no re-minted copy works.
+    // THIS device's row is deliberately left intact — the replacement token in
+    // the refresh header carries the same sid, so the session continues.
+    await pool.query(
+      `UPDATE user_sessions SET revoked_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+        WHERE user_id = $1 AND revoked_at IS NULL AND sid <> $2`,
+      [req.user.id, req.sessionId || '']
+    );
+    res.setHeader(REFRESH_HEADER, signToken(rows[0], req.sessionId));
     res.json({ success: true });
   } catch (err) {
     console.error(err);

@@ -11,6 +11,7 @@ import MemberPicker from '../components/MemberPicker';
 import StatusBanner from '../components/StatusBanner';
 import { PAYMENT_METHODS, paymentMethodLabel } from '../paymentMethods';
 import { EMPTY_VALUE } from '../emptyValue';
+import MemberLink from '../components/MemberLink';
 
 /*
  * Incoming payments: the reconciliation screen.
@@ -414,7 +415,7 @@ export default function Reconciliation() {
           <span className="font-medium text-ink-900">{r.payerName || t('reconciliation.noPayerName')}</span>
           <span className="block truncate text-xs text-ink-400">
             {r.matchedMemberName
-              ? t('reconciliation.matchedTo', { name: r.matchedMemberName, no: r.matchedMemberNo || '' })
+              ? <MemberLink memberId={r.matchedMemberId}>&rarr; {r.matchedMemberName} {r.matchedMemberNo || ''}</MemberLink>
               : r.suggestedMemberName
                 ? t('reconciliation.suggestedTo', { name: r.suggestedMemberName })
                 : r.payerPhone || r.accountName}

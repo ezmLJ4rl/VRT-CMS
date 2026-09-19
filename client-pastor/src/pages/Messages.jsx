@@ -4,7 +4,6 @@ import { MessageSquare, Send, ChevronDown, ChevronRight, Inbox, Users, HandCoins
 import { m } from 'motion/react';
 import { DURATION, EASE, settled, useSettled } from '../motion';
 import api, { apiErrorMessage } from '../api';
-import DataTable from '../components/DataTable';
 import StatusBanner from '../components/StatusBanner';
 import { useAuth } from '../context/AuthContext';
 import { useUnread } from '../context/UnreadContext';
@@ -21,6 +20,21 @@ function timeLabel(iso) {
   return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(d);
 }
 
+function churchTodayISO() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Dar_es_Salaam',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date()).reduce((out, part) => ({ ...out, [part.type]: part.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function digestTitle(t, i18n, date) {
+  if (date === churchTodayISO()) return t('messages.dailySummaryToday');
+  return t('messages.dailySummaryForDate', { date: formatDate(date, i18n.language) });
+}
+
 function isRoutineGroupMembershipNotice(message) {
   if (message.record_type === 'group_update') return true;
   let payload = message.payload || {};
@@ -31,6 +45,38 @@ function isRoutineGroupMembershipNotice(message) {
   return /^group update\s*:/i.test(message.subject || '') || /\bsee the group\b/i.test(message.body || '');
 }
 
+function mergeDigestBroadcasts(broadcasts) {
+  const merged = [];
+  const byDate = new Map();
+  for (const broadcast of broadcasts) {
+    const payload = broadcast.payload;
+    if (!payload?.date || (!payload.attendance && !payload.offerings)) {
+      merged.push(broadcast);
+      continue;
+    }
+    const existing = byDate.get(payload.date);
+    if (!existing) {
+      const copy = { ...broadcast, payload: { ...payload }, sourceIds: [broadcast.id] };
+      byDate.set(payload.date, copy);
+      merged.push(copy);
+      continue;
+    }
+    const attendance = new Map([...(existing.payload.attendance || []), ...(payload.attendance || [])].map((row) => [String(row.id), row]));
+    const offerings = new Map([...(existing.payload.offerings || []), ...(payload.offerings || [])].map((row) => [String(row.id), row]));
+    existing.payload = {
+      ...existing.payload,
+      attendance: [...attendance.values()],
+      offerings: [...offerings.values()],
+      attendanceSessions: attendance.size,
+      totalOfferings: [...offerings.values()].reduce((sum, row) => sum + Number(row.amount || 0), 0),
+    };
+    existing.sourceIds = [...existing.sourceIds, broadcast.id];
+    if (!existing.read_at || !broadcast.read_at) existing.read_at = null;
+    if (new Date(broadcast.sent_at) > new Date(existing.sent_at)) existing.sent_at = broadcast.sent_at;
+  }
+  return merged;
+}
+
 function attendanceMetricsForMessage(t, session) {
   return attendanceMetrics(session).map((metric) => ({
     ...metric,
@@ -38,11 +84,48 @@ function attendanceMetricsForMessage(t, session) {
   }));
 }
 
+function groupAttendance(sessions) {
+  const groups = new Map();
+  for (const session of sessions) {
+    const name = session.typeName || session.label || 'Service';
+    if (!groups.has(name)) groups.set(name, { name, sessions: [], total: 0 });
+    const group = groups.get(name);
+    group.sessions.push(session);
+    group.total += Number(session.recordedCount ?? session.count ?? 0);
+  }
+  return [...groups.values()];
+}
+
+function groupOfferings(gifts) {
+  const groups = new Map();
+  for (const gift of gifts) {
+    const name = gift.category || gift.type || 'Offering';
+    const currency = gift.currency || 'TZS';
+    const key = `${name}:${currency}`;
+    if (!groups.has(key)) groups.set(key, { name, currency, gifts: [], total: 0 });
+    const group = groups.get(key);
+    group.gifts.push(gift);
+    group.total += Number(gift.amount || 0);
+  }
+  return [...groups.values()];
+}
+
 function DigestCard({ t, i18n, b, onMarkRead }) {
   const p = b.payload || {};
-  const [openNames, setOpenNames] = useState(false);
   const sessions = p.attendance || [];
   const gifts = p.offerings || [];
+  const attendanceGroups = groupAttendance(sessions);
+  const offeringGroups = groupOfferings(gifts);
+  const [openGroups, setOpenGroups] = useState(new Set());
+
+  function toggle(key) {
+    setOpenGroups((previous) => {
+      const next = new Set(previous);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
   return (
     <div className="overflow-hidden rounded-lg border border-people-200 bg-people-50">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-people-100 bg-white/60 px-3 py-2.5">
@@ -52,108 +135,46 @@ function DigestCard({ t, i18n, b, onMarkRead }) {
           <span className="flex items-center gap-1 text-people-700"><Users size={13} className="shrink-0" /> {sessions.length} {t('messages.sessionsShort')}</span>
           <span className="flex items-center gap-1 text-offering-700"><HandCoins size={13} className="shrink-0" /> {Number(p.totalOfferings || 0).toLocaleString()} {p.currency || 'TZS'}</span>
         </p>
-        {b.read_at ? (
-          <span className="text-xs text-ink-400">{t('messages.read')}</span>
-        ) : (
-          <button type="button" onClick={onMarkRead} className="text-xs font-medium text-brand-700 hover:underline">
-            {t('messages.markRead')}
-          </button>
-        )}
+        {b.read_at ? <span className="text-xs text-ink-400">{t('messages.read')}</span> : <button type="button" onClick={onMarkRead} className="text-xs font-medium text-brand-700 hover:underline">{t('messages.markRead')}</button>}
       </div>
 
-      {sessions.length > 0 && (
-        <div className="px-3 py-2.5">
+      {attendanceGroups.length > 0 && (
+        <section className="px-3 py-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">{t('messages.attendanceSection')}</p>
-          {/* The one shared table pattern (components/DataTable): fixed columns
-              under their headers, sticky header, and the same card reflow on
-              narrow screens as every other list. */}
-          <div className="rounded-lg border border-ink-100 bg-white p-3">
-            <DataTable
-              columns={[
-                { key: 'label', header: t('messages.colSession'), render: (s) => <span className="font-medium text-ink-900">{s.label}</span> },
-                {
-                  key: 'count',
-                  header: t('messages.colCount'),
-                  width: 16,
-                  align: 'right',
-                  cardValue: true,
-                  render: (s) => {
-                    const metrics = attendanceMetricsForMessage(t, s);
-                    return (
-                      <span className="flex flex-wrap justify-end gap-1.5 font-semibold tabular-nums text-people-700">
-                        {metrics.map((metric) => <span key={metric.kind}>{metric.count.toLocaleString()} {metric.label}</span>)}
-                      </span>
-                    );
-                  },
-                },
-                {
-                  key: 'names',
-                  header: t('messages.colNames'),
-                  width: 20,
-                  align: 'right',
-                  render: (s) =>
-                    (s.attendees || []).length > 0 ? (
-                      <button type="button" onClick={() => setOpenNames(!openNames)} className="inline-flex items-center gap-1 text-xs font-medium text-people-700 hover:underline">
-                        {openNames ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                        {s.attendees.length} {t('records.namesCount')}
-                      </button>
-                    ) : null,
-                },
-              ]}
-              rows={sessions}
-              keyOf={(s) => s.id}
-              empty={null}
-              expandedRow={(s) =>
-                openNames && (s.attendees || []).length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {s.attendees.map((n, i) => (
-                      <span key={i} className="rounded-full bg-white px-2.5 py-0.5 text-xs text-ink-700 ring-1 ring-ink-200">{n}</span>
-                    ))}
-                  </div>
-                ) : null
-              }
-            />
+          <div className="space-y-2">
+            {attendanceGroups.map((group) => {
+              const key = `attendance:${group.name}`;
+              const open = openGroups.has(key);
+              return (
+                <div key={key} className="rounded-lg bg-white/80 px-3 py-2.5">
+                  <button type="button" aria-expanded={open} onClick={() => toggle(key)} className="flex w-full items-center justify-between gap-3 text-left">
+                    <span className="flex min-w-0 items-center gap-2"><span className="shrink-0 text-people-700">{open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</span><span className="truncate font-semibold text-ink-900">{group.name}</span></span>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums text-people-700">{group.total.toLocaleString()} {t('messages.recordedShort')}</span>
+                  </button>
+                  {open && <div className="mt-2 space-y-2 border-t border-ink-100 pt-2">{group.sessions.map((session) => <div key={session.id} className="pl-6"><div className="flex items-start justify-between gap-3 text-sm"><span className="text-ink-700">{session.subSession || t('messages.sessionDetail')}</span><span className="shrink-0 text-right font-medium tabular-nums text-people-700">{attendanceMetricsForMessage(t, session).map((metric) => <span key={metric.kind} className="ml-2">{metric.count.toLocaleString()} {metric.label}</span>)}</span></div>{session.attendees?.length > 0 && <p className="mt-1 text-xs leading-relaxed text-ink-400">{session.attendees.join(', ')}</p>}</div>)}</div>}
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </section>
       )}
 
-      {gifts.length > 0 && (
-        <div className="px-3 py-2.5">
+      {offeringGroups.length > 0 && (
+        <section className="px-3 pb-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">{t('messages.offeringsSection')}</p>
-          {/* Same shared pattern; the app-wide offerings column order. */}
-          <div className="rounded-lg border border-ink-100 bg-white p-3">
-            <DataTable
-              columns={[
-                { key: 'category', header: t('messages.colCategory'), render: (g) => <span className="cat-chip category-offering">{g.category}</span> },
-                {
-                  key: 'giver',
-                  header: t('messages.colGiver'),
-                  render: (g) =>
-                    // A general offering needs no name, so an empty giver is a
-                    // normal record, not missing data: say so instead of
-                    // printing a bare dash that reads like a broken value.
-                    g.giver || (
-                      <span className="text-ink-400" title={t('messages.noNameRecorded')}>
-                        {t('common.anonymous')}
-                      </span>
-                    ),
-                },
-                { key: 'service', header: t('messages.colService'), width: 24, render: (g) => <span className="text-xs text-ink-500">{g.service}{g.receipt ? ` · ${g.receipt}` : ''}</span> },
-                {
-                  key: 'amount',
-                  header: t('messages.colAmount'),
-                  width: 18,
-                  align: 'right',
-                  cardValue: true,
-                  render: (g) => <span className="font-semibold tabular-nums text-offering-700">{Number(g.amount).toLocaleString()} {g.currency}</span>,
-                },
-              ]}
-              rows={gifts}
-              keyOf={(g) => g.id}
-              empty={null}
-            />
+          <div className="space-y-2">
+            {offeringGroups.map((group) => {
+              const key = `offering:${group.name}:${group.currency}`;
+              const open = openGroups.has(key);
+              return (
+                <div key={key} className="rounded-lg bg-white/80 px-3 py-2.5">
+                  <button type="button" aria-expanded={open} onClick={() => toggle(key)} className="flex w-full items-center justify-between gap-3 text-left"><span className="flex min-w-0 items-center gap-2"><span className="shrink-0 text-offering-700">{open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</span><span className="truncate font-semibold text-ink-900">{group.name}</span></span><span className="shrink-0 text-sm font-semibold tabular-nums text-offering-700">{group.total.toLocaleString()} {group.currency}</span></button>
+                  {open && <div className="mt-2 space-y-2 border-t border-ink-100 pt-2">{group.gifts.map((gift) => <div key={gift.id} className="grid gap-0.5 pl-6 text-sm sm:grid-cols-[1fr_auto]"><span className="text-ink-600">{gift.giver || t('common.anonymous')}<span className="text-xs text-ink-400">{gift.service ? ` · ${gift.service}` : ''}{gift.receipt ? ` · ${gift.receipt}` : ''}</span></span><span className="font-medium tabular-nums text-offering-700">{Number(gift.amount).toLocaleString()} {gift.currency}</span></div>)}</div>}
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </section>
       )}
 
       {b.body && !sessions.length && !gifts.length && <p className="whitespace-pre-wrap px-3 py-2.5 text-sm text-ink-600">{b.body}</p>}
@@ -213,7 +234,9 @@ export default function Messages() {
         // notifications. The server filters them too; this client-side guard
         // protects older servers or already-cached responses from resurfacing
         // those rows in the Pastor feed.
-        const list = (data.conversations.broadcasts || []).filter((b) => !isRoutineGroupMembershipNotice(b));
+        const list = mergeDigestBroadcasts(
+          (data.conversations.broadcasts || []).filter((b) => !isRoutineGroupMembershipNotice(b))
+        );
         const seen = seenBroadcasts.current;
         seenBroadcasts.current = new Set(list.map((b) => b.id));
         // Compared in the loader rather than in render: the previous set is the
@@ -236,10 +259,11 @@ export default function Messages() {
 
   async function markBroadcastRead(b) {
     if (b.read_at) return;
-    await api.patch(`/messages/${b.id}/read`).catch(() => {});
+    const sourceIds = b.sourceIds || [b.id];
+    await Promise.all(sourceIds.map((id) => api.patch(`/messages/${id}/read`).catch(() => {})));
     setConversations((prev) => ({
       ...prev,
-      broadcasts: prev.broadcasts.map((item) => (item.id === b.id ? { ...item, read_at: new Date().toISOString() } : item)),
+      broadcasts: prev.broadcasts.map((item) => (sourceIds.includes(item.id) || item.id === b.id ? { ...item, read_at: new Date().toISOString() } : item)),
     }));
     refreshUnread();
   }
@@ -317,7 +341,7 @@ export default function Messages() {
             {conversations.broadcasts.filter((b) => !isRoutineGroupMembershipNotice(b)).map((b) => (
               <BroadcastNotice key={b.id} fresh={freshBroadcasts.includes(b.id)}>
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-ink-900">{b.payload?.attendance || b.payload?.offerings ? t('messages.dailySummary') : b.subject}</p>
+                  <p className="text-sm font-semibold text-ink-900">{b.payload?.attendance || b.payload?.offerings ? (b.payload.date ? digestTitle(t, i18n, b.payload.date) : t('messages.dailySummary')) : b.subject}</p>
                   <span className="shrink-0 text-xs text-ink-400">{timeLabel(b.sent_at)}</span>
                 </div>
                 {b.payload?.attendance || b.payload?.offerings ? (

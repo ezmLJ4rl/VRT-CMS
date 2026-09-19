@@ -6,8 +6,8 @@ const { refreshIfAged, tokenMatchesPassword } = require('../utils/token');
 /**
  * Verifies one token and returns the fresh user row, or null after answering
  * 401 itself. Both entry points below share this so the checks (account still
- * exists and is active, password unchanged since the token was minted, sliding
- * renewal) can never drift apart between them.
+ * exists and is active, password unchanged since the token was minted, session
+ * not revoked, sliding renewal) can never drift apart between them.
  */
 async function resolveSession(req, res, token) {
   const payload = jwt.verify(token, process.env.JWT_SECRET);
@@ -23,6 +23,31 @@ async function resolveSession(req, res, token) {
   if (!tokenMatchesPassword(payload, user)) {
     res.status(401).json({ error: 'errors.passwordChangedLogAgain' });
     return null;
+  }
+  // A session identity the server does not recognise (never registered, revoked
+  // by "log out everywhere", or revoked because the password changed) is dead,
+  // whatever the JWT's own lifetime says. Tokens minted before sessions existed
+  // carry no `sid`; they are left to expire naturally rather than signing every
+  // user out on deploy.
+  if (payload.sid) {
+    const { rowCount } = await pool.query(
+      'SELECT 1 FROM user_sessions WHERE sid = $1 AND user_id = $2 AND revoked_at IS NULL',
+      [payload.sid, user.id]
+    );
+    if (!rowCount) {
+      res.status(401).json({ error: 'errors.sessionEndedLogAgain' });
+      return null;
+    }
+    // Heartbeat keeps "which devices are really in use" truthful. Cheap and
+    // safe to run per request: one indexed row, and the write is skipped when
+    // last_active_at is already current-minute, which covers API bursts.
+    await pool.query(
+      `UPDATE user_sessions SET last_active_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+        WHERE sid = $1 AND user_id = $2
+          AND last_active_at < to_char(now(), 'YYYY-MM-DD HH24:MI:SS')`,
+      [payload.sid, user.id]
+    );
+    req.sessionId = payload.sid;
   }
   // Long sessions are renewed as they are used, so an active user never gets
   // signed out; the replacement travels in a response header the clients store.

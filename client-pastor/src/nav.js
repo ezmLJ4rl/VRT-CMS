@@ -1,4 +1,4 @@
-import { Home, ClipboardList, AlertTriangle, MessageSquare, CalendarDays, MoreHorizontal, Target } from 'lucide-react';
+import { Home, ClipboardList, AlertTriangle, MessageSquare, CalendarDays, CalendarClock, MoreHorizontal, Target } from 'lucide-react';
 
 /*
  * What the pastor app navigates to, in one place.
@@ -15,6 +15,7 @@ export const TABS = [
   { to: '/emergencies', key: 'emergencies', Icon: AlertTriangle },
   { to: '/events', key: 'events', Icon: CalendarDays },
   { to: '/messages', key: 'messages', Icon: MessageSquare },
+  { to: '/appointments', key: 'appointments', Icon: CalendarClock },
   // Progress on the church's special projects: read-only, and worth being one
   // tap away rather than buried in More.
   { to: '/projects', key: 'projects', Icon: Target },

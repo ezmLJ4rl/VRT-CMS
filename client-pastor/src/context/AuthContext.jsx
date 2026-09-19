@@ -41,7 +41,21 @@ export function AuthProvider({ children }) {
     if (userObj.language_pref) setLanguage(userObj.language_pref);
   }
 
-  function logout() {
+  /**
+   * Ends THIS device's session on the server, then clears the local copy.
+   * Other signed-in devices are unaffected: the server revokes exactly the
+   * session that made the request (see server/routes/auth.js). Network errors
+   * still clear the local token — the device cannot stay signed in on a
+   * credential it cannot present — and the response is marked so the api
+   * interceptor does not double-handle the 401 as an expiry.
+   */
+  async function logout() {
+    try {
+      await api.post('/auth/logout', null, { headers: { 'X-Skip-Auth-Redirect': '1' } });
+    } catch {
+      // The session is cleared locally regardless; a server that cannot be
+      // reached will expire the row naturally.
+    }
     localStorage.removeItem('vrt_token');
     localStorage.removeItem('vrt_user');
     setUser(null);

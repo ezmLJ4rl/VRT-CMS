@@ -43,6 +43,32 @@ describe('phase 2: notification integrity', () => {
     assert.equal(pending, 0);
   });
 
+  it('consolidates attendance and offerings into one dated digest', async () => {
+    const attendance = await suite.api('POST', '/api/attendance', adminToken, { serviceTypeId: 1, count: 12 });
+    assert.equal(attendance.status, 201, attendance.text);
+    const offering = await suite.api('POST', '/api/offerings', adminToken, { serviceTypeId: 1, category: 'zaka', amount: 4699900, offererName: 'Test Giver' });
+    assert.equal(offering.status, 201, offering.text);
+
+    const before = (await suite.get("SELECT COUNT(*) c FROM messages WHERE recipient_role = 'pastor'")).c;
+    const sent = await suite.api('POST', '/api/notifications/send-summary', adminToken);
+    assert.equal(sent.status, 200, sent.text);
+    assert.equal(sent.json.sent, true);
+    assert.equal(sent.json.attendanceCount, 1);
+    assert.equal(sent.json.offeringsCount, 1);
+
+    const after = (await suite.get("SELECT COUNT(*) c FROM messages WHERE recipient_role = 'pastor'")).c;
+    assert.equal(after, before, 'the second partial send must update the existing dated digest');
+    const digest = await suite.get("SELECT payload FROM messages WHERE recipient_role = 'pastor' ORDER BY id DESC LIMIT 1");
+    const payload = JSON.parse(digest.payload);
+    assert.equal(payload.attendance.length, 1);
+    assert.ok(payload.offerings.length >= 1);
+    assert.ok(payload.offerings.some((row) => Number(row.amount) === 4699900));
+
+    const again = await suite.api('POST', '/api/notifications/send-summary', adminToken);
+    assert.equal(again.json.sent, false);
+    assert.equal((await suite.get("SELECT COUNT(*) c FROM messages WHERE recipient_role = 'pastor'")).c, after);
+  });
+
   it('digest skips voided offerings', async () => {
     const rec = await suite.api('POST', '/api/offerings', adminToken, { serviceTypeId: 1, category: 'general', amount: 999 });
     assert.equal(rec.status, 201);
@@ -100,10 +126,11 @@ describe('phase 2: the unread badge counts each thing once', () => {
     assert.equal(sent.json.sent, true, sent.text);
 
     const after = await unreadFor();
-    // The broadcast counts; its in-app twin is the same event and must not.
-    assert.equal(after.unread, before.unread + 1);
+    // The existing dated digest is updated in place; its in-app twin remains
+    // one event and must not create a second unread item.
+    assert.equal(after.unread, before.unread);
     assert.equal(after.notifications, before.notifications);
-    assert.equal(after.total, before.total + 1);
+    assert.equal(after.total, before.total);
   });
 
   it('marks the canonical message read when its Home notification twin is opened', async () => {

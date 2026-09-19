@@ -25,6 +25,7 @@ const PASTOR_NOTIFICATION_CATEGORIES = Object.freeze([
   'message',
   'project_milestone',
   'leadership_change',
+  'appointment_request',
 ]);
 const PASTOR_NOTIFICATION_CATEGORY_SET = new Set(PASTOR_NOTIFICATION_CATEGORIES);
 

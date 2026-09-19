@@ -9,6 +9,7 @@ import StatusBanner from '../components/StatusBanner';
 import TrendChart from '../components/TrendChart';
 import { formatDateShort } from '../format';
 import { EMPTY_VALUE } from '../emptyValue';
+import MemberLink from '../components/MemberLink';
 
 const PALETTE = ['var(--color-people-600)', 'var(--color-people-400)', 'var(--color-people-800)', 'var(--color-people-300)', 'var(--color-people-500)', 'var(--color-people-700)', 'var(--color-people-200)', 'var(--color-people-900)'];
 
@@ -275,7 +276,11 @@ export default function AdminDashboard() {
           <p className="mb-4 text-xs text-ink-400">{t('admin.topContributorsNote')}</p>
           <DataTable
             columns={[
-              { key: 'name', header: t('projects.colGiver'), render: (c) => <span className="font-medium text-ink-900">{c.name}</span> },
+              { key: 'name', header: t('projects.colGiver'), render: (c) => (
+                c.memberId
+                  ? <MemberLink memberId={c.memberId}>{c.name}</MemberLink>
+                  : <span className="font-medium text-ink-900">{c.name}</span>
+              ) },
               {
                 key: 'total',
                 header: t('admin.offeringsHeader'),

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import Messages from './Messages';
@@ -89,6 +89,59 @@ describe('Pastor Messages notification taxonomy', () => {
 
     expect(await screen.findByText(/5,000 TZS/)).toBeInTheDocument();
     expect(screen.getByText(/44 recorded/)).toBeInTheDocument();
+    expect(screen.getByText(/Summary from the front desk — 14 Sept 2026/)).toBeInTheDocument();
+  });
+
+  it('merges legacy partial digests for the same date into one card', async () => {
+    renderMessages([
+      {
+        id: 11,
+        subject: 'Today’s summary from the front desk',
+        body: 'attendance only',
+        payload: { date: '2026-09-18', totalOfferings: 0, currency: 'TZS', attendance: [{ id: 11, label: '1st Sunday Service', typeName: '1st Sunday Service', count: 44, mode: 'headcount', attendees: [] }], offerings: [] },
+        read_at: null,
+        sent_at: new Date().toISOString(),
+      },
+      {
+        id: 12,
+        subject: 'Today’s summary from the front desk',
+        body: 'offering only',
+        payload: { date: '2026-09-18', totalOfferings: 4699900, currency: 'TZS', attendance: [], offerings: [{ id: 12, category: 'Zaka (Tithe)', amount: 4699900, currency: 'TZS', giver: 'Asha' }] },
+        read_at: null,
+        sent_at: new Date().toISOString(),
+      },
+    ]);
+
+    expect((await screen.findAllByText(/Summary from the front desk — 18 Sept 2026/)).length).toBe(1);
+    expect(screen.getByText(/44 recorded/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Zaka \(Tithe\).*4,699,900 TZS/i })).toBeInTheDocument();
+  });
+
+  it('groups offerings by category and keeps giver details collapsed until expanded', async () => {
+    renderMessages([{
+      id: 10,
+      subject: 'Daily summary',
+      body: 'digest',
+      payload: {
+        date: '2026-09-14',
+        totalOfferings: 7000,
+        currency: 'TZS',
+        attendance: [],
+        offerings: [
+          { id: 1, category: 'Zaka (Tithe)', amount: 5000, currency: 'TZS', giver: 'Asha', service: 'Sunday Service' },
+          { id: 2, category: 'Zaka (Tithe)', amount: 2000, currency: 'TZS', giver: 'Baraka', service: 'Sunday Service' },
+        ],
+      },
+      read_at: null,
+      sent_at: new Date().toISOString(),
+    }]);
+
+    expect(await screen.findByRole('button', { name: /Zaka \(Tithe\).*7,000 TZS/i })).toBeInTheDocument();
+    expect(screen.queryByText('Asha')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Zaka \(Tithe\).*7,000 TZS/i }));
+    expect(screen.getByText('Asha')).toBeInTheDocument();
+    expect(screen.getByText('Baraka')).toBeInTheDocument();
   });
 
   it('keeps direct pastoral messages visible', async () => {

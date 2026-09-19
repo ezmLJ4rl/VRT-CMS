@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Users, CalendarDays, Gift, Landmark, X, ChevronRight } from 'lucide-react';
+import { Download, Users, CalendarDays, Gift, Landmark, X } from 'lucide-react';
 import api, { apiErrorMessage, API_BASE } from '../api';
 import AppShell from '../components/AppShell';
 import DataTable from '../components/DataTable';
@@ -9,6 +9,7 @@ import BarChart from '../components/BarChart';
 import ServiceTrendGrid from '../components/ServiceTrendGrid';
 import { paymentMethodLabel } from '../paymentMethods';
 import { EMPTY_VALUE } from '../emptyValue';
+import MemberLink from '../components/MemberLink';
 
 function todayISO() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Dar_es_Salaam', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -376,7 +377,11 @@ export default function Reports() {
                             render: (r) => <span className="tabular-nums text-ink-900">{money.format(r.amount)}{r.currency && r.currency !== 'TZS' ? ` ${r.currency}` : ''}</span>,
                           },
                           { key: 'payment', header: t('reports.drillPayment'), width: 15, render: (r) => <span className="text-ink-600">{r.payment_method ? paymentMethodLabel(t, r.payment_method) : t('reports.unassigned')}</span> },
-                          { key: 'giver', header: t('reports.drillGiver'), width: 15, render: (r) => <span className="text-ink-600">{r.offererName || EMPTY_VALUE}</span> },
+                          { key: 'giver', header: t('reports.drillGiver'), width: 15, render: (r) => (
+                            r.member_id || r.memberId
+                              ? <MemberLink memberId={r.member_id || r.memberId}>{r.offererName || EMPTY_VALUE}</MemberLink>
+                              : <span className="text-ink-600">{r.offererName || EMPTY_VALUE}</span>
+                          ) },
                           { key: 'receipt', header: t('reports.drillReceipt'), width: 14, render: (r) => <span className="text-ink-600">{r.receipt_number || EMPTY_VALUE}</span> },
                         ]}
                         rows={drillData.offerings}

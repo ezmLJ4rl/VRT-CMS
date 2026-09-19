@@ -151,7 +151,7 @@ export default function ReceptionistDashboard() {
       api.get('/groups').then(({ data }) => data.groups).catch(() => null),
       api.get('/revival-centers').then(({ data }) => data.revivalCenters).catch(() => null),
       api.get('/offerings/categories').then(({ data }) => data.categories).catch(() => null),
-      api.get('/projects').then(({ data }) => data.projects).catch(() => null),
+      api.get('/projects').then(({ data }) => data.projects.filter((p) => p.status === 'active')).catch(() => null),
     ]);
     if (g) setGroups(g);
     if (rc) setCenters(rc);
@@ -799,7 +799,7 @@ export default function ReceptionistDashboard() {
                   type="button"
                   onClick={handleSendSummary}
                   disabled={summarySending}
-                  className="btn btn-primary w-full"
+                  className="btn btn-secondary w-full"
                 >
                   <Send size={15} /> {summarySending ? t('common.sending') : t('receptionist.sendSummary')}
                 </button>

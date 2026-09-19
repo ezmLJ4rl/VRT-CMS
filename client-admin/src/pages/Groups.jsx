@@ -365,7 +365,7 @@ export default function Groups() {
                 </div>
                 {!isEditing && (
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link to={`/groups/${g.id}`} className="btn btn-secondary px-3 py-1.5 text-xs">
+                    <Link to={`/groups/${g.id}`} className="btn btn-primary px-3 py-1.5 text-xs">
                       <ChevronRight size={13} /> {t('groups.viewMembers')}
                     </Link>
                     {/* Row menu: actions beyond the two primary ones live here,

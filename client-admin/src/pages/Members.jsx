@@ -9,6 +9,7 @@ import GroupLogo from '../components/GroupLogo';
 import RowMenu, { RowMenuItem } from '../components/RowMenu';
 import StatusBanner from '../components/StatusBanner';
 import MemberProfile from '../components/MemberProfile';
+import MemberLink from '../components/MemberLink';
 import MembersHeader from '../components/MembersHeader';
 import TypedConfirmDialog from '../components/TypedConfirmDialog';
 
@@ -721,7 +722,7 @@ export default function Members() {
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-display font-semibold text-ink-900">{m.name}</span>
+                  <MemberLink memberId={m.id} className="font-display font-semibold text-ink-900">{m.name}</MemberLink>
                   <span className="cat-chip category-people">{m.member_no}</span>
                   {!m.is_active && <span className="cat-chip category-amber">{t('members.inactive')}</span>}
                   {(m.member_groups || []).map((g) => (

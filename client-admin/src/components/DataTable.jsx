@@ -175,7 +175,7 @@ export default function DataTable({
   return (
     <div>
       <div
-        className={`scb rounded-lg ${className} ${scrollHeight ? 'overflow-y-auto' : ''}`}
+        className={`scb rounded-lg ${className} ${scrollHeight ? 'has-scroll overflow-y-auto' : ''}`}
         style={scrollHeight ? { maxHeight: scrollHeight } : undefined}
       >
         <table className="w-full table-fixed border-collapse text-left text-sm">
@@ -190,7 +190,7 @@ export default function DataTable({
                 <th
                   key={c.key}
                   scope="col"
-                  className={`sticky top-0 z-10 bg-paper py-2 pr-3 text-xs font-medium uppercase tracking-wide text-ink-400 shadow-[0_1px_0_var(--color-ink-200)] last:pr-0 ${c.align === 'right' ? 'text-right' : ''}`}
+                  className={`${scrollHeight ? 'sticky top-0 z-10 bg-paper shadow-[0_1px_0_var(--color-ink-200)]' : 'border-b border-ink-200'} py-2 pr-3 text-xs font-medium uppercase tracking-wide text-ink-400 last:pr-0 ${c.align === 'right' ? 'text-right' : ''}`}
                 >
                   {c.header}
                 </th>

@@ -6,7 +6,6 @@ import api, { apiErrorMessage } from '../api';
 import { useAuth } from '../context/AuthContext';
 import StatusBanner from '../components/StatusBanner';
 import VrtLogo from '../components/VrtLogo';
-import { LOGO_SIZE } from '../logoSize';
 import { CHURCH_NAME, CHURCH_LOCATION } from '../i18n/common';
 
 const HOME_BY_ROLE = { receptionist: '/receptionist', admin: '/admin', superadmin: '/admin' };
@@ -85,7 +84,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="rounded-xl border border-ink-200 bg-paper p-5 shadow-xl sm:p-6">
           <div className="mb-3 text-center">
-            <VrtLogo size={104} className="mx-auto mb-2" />
+            <VrtLogo size={144} className="mx-auto mb-3" />
             <h1 className="font-display text-xl font-semibold tracking-tight text-ink-900">{CHURCH_NAME}</h1>
             <p className="mt-1 text-xs text-ink-400">{CHURCH_LOCATION}</p>
           </div>

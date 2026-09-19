@@ -12,7 +12,9 @@ import { DEFAULT_CURRENCY } from '../i18n/common';
 import { monthLabel } from '../centerTrends';
 import { ROLE_SUGGESTIONS, roleLabel, zoneMismatch } from '../zoneRoles';
 import { ExpandingPanel } from '../motionUi.jsx';
+import RowMenu, { RowMenuItem } from '../components/RowMenu';
 import { EMPTY_VALUE } from '../emptyValue';
+import MemberLink from '../components/MemberLink';
 
 // Six complete months: enough to see a direction, few enough that every bar of
 // the sparkline is a period a leader still remembers.
@@ -104,6 +106,7 @@ export default function Centers() {
   // Service Types opens one row at a time: a page where everything is editable at
   // once makes every row look like a form.
   const [managingId, setManagingId] = useState(null);
+  const [menuOpenId, setMenuOpenId] = useState(null);
 
   // The inline roster remains available from the explicit View members action;
   // tapping the center name opens the dedicated center page.
@@ -474,29 +477,35 @@ export default function Centers() {
                     type="button"
                     onClick={() => setOpenRoster(openRoster === c.id ? null : c.id)}
                     aria-expanded={openRoster === c.id}
-                    className="flex items-center gap-1.5 rounded-md border border-ink-200 px-3 py-1.5 text-xs font-medium text-ink-700 hover:border-brand-600 hover:text-brand-800"
+                    className="btn btn-primary px-3 py-1.5 text-xs"
                   >
                     <Users size={13} />
                     {openRoster === c.id ? t('centers.hideMembers') : t('centers.viewMembers')}
                   </button>
                   {isAdmin && (
-                    <button
-                      onClick={() => toggleCenter(c)}
-                      className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium ${c.is_active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-people-50 text-people-800 hover:bg-people-100'}`}
+                    <RowMenu
+                      open={menuOpenId === c.id}
+                      onToggle={() => setMenuOpenId(menuOpenId === c.id ? null : c.id)}
+                      onClose={() => setMenuOpenId(null)}
+                      label={t('centers.rowMenu')}
                     >
-                      <Power size={13} /> {c.is_active ? t('centers.disable') : t('centers.enable')}
-                    </button>
-                  )}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => toggleManaging(c.id)}
-                      aria-expanded={managing}
-                      className="flex items-center gap-1.5 rounded-md border border-ink-200 px-3 py-1.5 text-xs font-medium text-ink-700 hover:border-brand-600 hover:text-brand-800"
-                    >
-                      <Pencil size={13} />
-                      {managing ? t('centers.close') : t('centers.manage')}
-                    </button>
+                      <RowMenuItem
+                        onClick={() => {
+                          setMenuOpenId(null);
+                          toggleManaging(c.id);
+                        }}
+                      >
+                        <Pencil size={14} /> {managing ? t('centers.close') : t('centers.manage')}
+                      </RowMenuItem>
+                      <RowMenuItem
+                        onClick={() => {
+                          setMenuOpenId(null);
+                          toggleCenter(c);
+                        }}
+                      >
+                        <Power size={14} /> {c.is_active ? t('centers.disable') : t('centers.enable')}
+                      </RowMenuItem>
+                    </RowMenu>
                   )}
                 </div>
               </div>
@@ -582,7 +591,7 @@ export default function Centers() {
                                 ) : (
                                   <span className="font-medium">{roleLabel(t, l.roleName)}</span>
                                 )}
-                                <span className="text-people-800">{l.name}</span>
+                                <MemberLink memberId={l.memberId} className="text-people-800">{l.name}</MemberLink>
                                 {mismatch && (
                                   <span className="cat-chip category-amber" title={t('centers.leaderNotInZoneHint')}>
                                     {mismatch}
@@ -706,7 +715,7 @@ export default function Centers() {
                       <ul className="space-y-1">
                         {centerLeadersOf(c).map((l) => (
                           <li key={`${l.zoneName}-${l.memberId}`} className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                            <span className="font-medium text-ink-800">{l.name}</span>
+                            <MemberLink memberId={l.memberId} className="font-medium text-ink-800">{l.name}</MemberLink>
                             <span className="text-xs font-medium text-people-700">{roleLabel(t, l.roleName)}</span>
                             <span className="text-xs text-ink-400">{l.zoneName}</span>
                             {/* The roll-up is where "who is in charge of what"

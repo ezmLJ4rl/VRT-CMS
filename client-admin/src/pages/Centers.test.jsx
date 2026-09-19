@@ -300,7 +300,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     const zoneARow = zoneRow(row, 'Zone A');
     const zoneBRow = zoneRow(row, 'Zone B');
@@ -332,7 +333,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     const zoneB = zoneRow(row, 'Zone B');
     await user.click(within(zoneB).getByRole('button', { name: 'Assign a leader' }));
@@ -377,7 +379,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     const zoneB = zoneRow(row, 'Zone B');
     await user.click(within(zoneB).getByRole('button', { name: 'Assign a leader' }));
@@ -395,7 +398,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     // Neema K is filed in Zone A and is already its Deacon, and one member holds
     // one role per zone, so she is not offered a second one.
@@ -412,7 +416,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     // Zone C has leaders recorded but no members of its own, so nobody could
     // legitimately be given an office there, and the app says why.
@@ -427,7 +432,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     // Nobody was ever assigned a "center leader": this is the zones' leaders.
     const rollUp = within(row).getByText('Center leaders').closest('div');
@@ -446,7 +452,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     const zoneA = zoneRow(row, 'Zone A');
     await user.click(within(zoneA).getByRole('button', { name: 'Remove as leader: Neema K' }));
@@ -463,7 +470,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     // Zone C has two; taking one out leaves the other in office, with her role.
     const zoneC = zoneRow(row, 'Zone C');
@@ -491,7 +499,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     const zoneA = zoneRow(row, 'Zone A');
     await user.click(within(zoneA).getByRole('button', { name: 'Name role' }));
@@ -521,7 +530,8 @@ describe('Revival Centers', () => {
     renderPage();
     await screen.findByText('Kimara Revival Center');
     const row = screen.getByText('Kimara Revival Center').closest('li');
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
 
     const zoneA = zoneRow(row, 'Zone A');
     expect(within(zoneA).getByText('not in this zone')).toBeInTheDocument();
@@ -664,7 +674,7 @@ describe('Revival Centers', () => {
     expect(within(row).getByText('4 members')).toBeInTheDocument();
     expect(within(row).getByText('3 zones')).toBeInTheDocument();
     expect(within(row).getByRole('button', { name: 'View members' })).toBeInTheDocument();
-    expect(within(row).getByRole('button', { name: 'Disable' })).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'More actions' })).toBeInTheDocument();
 
     // The management surface is not on every row at once: no zone rows, no
     // add-zone field, no reorder arrows until the row is opened.
@@ -673,7 +683,8 @@ describe('Revival Centers', () => {
     expect(within(row).queryByRole('button', { name: 'Move up' })).toBeNull();
     expect(within(row).queryByRole('button', { name: 'Move down' })).toBeNull();
 
-    await user.click(within(row).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(row).getByRole('button', { name: 'More actions' }));
+    await user.click(within(row).getByRole('menuitem', { name: 'Manage zones' }));
     expect(within(row).getAllByText('Zone leaders:')).toHaveLength(3);
     expect(within(row).getByPlaceholderText('Add zone…')).toBeInTheDocument();
     expect(within(row).getByRole('button', { name: 'Move up' })).toBeInTheDocument();
@@ -686,13 +697,15 @@ describe('Revival Centers', () => {
     const kimara = screen.getByText('Kimara Revival Center').closest('li');
     const mbezi = screen.getByText('Mbezi Revival Center').closest('li');
 
-    await user.click(within(kimara).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(kimara).getByRole('button', { name: 'More actions' }));
+    await user.click(within(kimara).getByRole('menuitem', { name: 'Manage zones' }));
     expect(within(kimara).getAllByText('Zone leaders:')).toHaveLength(3);
 
-    await user.click(within(mbezi).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(mbezi).getByRole('button', { name: 'More actions' }));
+    await user.click(within(mbezi).getByRole('menuitem', { name: 'Manage zones' }));
     // Opening the second closes the first, so nothing editable is on screen twice.
     expect(within(kimara).queryAllByText('Zone leaders:')).toHaveLength(0);
-    expect(within(kimara).queryByRole('button', { name: 'Manage zones' })).toBeInTheDocument();
+    expect(within(kimara).queryByRole('button', { name: 'More actions' })).toBeInTheDocument();
     expect(within(mbezi).getByText('No zones yet.')).toBeInTheDocument();
   });
 
@@ -708,7 +721,8 @@ describe('Revival Centers', () => {
     // "Nothing to report" repeated down eight centers is not a reading.
     expect(within(silent).queryByText('no activity')).toBeNull();
 
-    await user.click(within(silent).getByRole('button', { name: 'Manage zones' }));
+    await user.click(within(silent).getByRole('button', { name: 'More actions' }));
+    await user.click(within(silent).getByRole('menuitem', { name: 'Manage zones' }));
     // It is answered where someone has actually asked about that one center, and
     // for both series: attendance and giving.
     await waitFor(() => expect(within(silent).getAllByText('no activity')).toHaveLength(2));

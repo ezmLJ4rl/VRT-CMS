@@ -439,6 +439,18 @@ router.patch('/:id', requireRole('admin', 'superadmin'), async (req, res) => {
     const invalid = validateProject(p, { requireGoal: false });
     if (invalid) return res.status(400).json({ error: invalid });
 
+    if (p.currency !== existing.currency) {
+      const { rows: financialRows } = await pool.query(
+        `SELECT EXISTS (SELECT 1 FROM offerings WHERE project_id = $1)
+                  OR EXISTS (SELECT 1 FROM project_pledges WHERE project_id = $1)
+                  OR EXISTS (SELECT 1 FROM project_debts WHERE project_id = $1) AS has_financial_records`,
+        [existing.id]
+      );
+      if (financialRows[0]?.has_financial_records) {
+        return res.status(409).json({ error: 'errors.projectCurrencyLocked' });
+      }
+    }
+
     await pool.query(
       `UPDATE projects SET name = $1, description = $2, status = $3, started_on = $4, target_on = $5,
               goal_amount = $6, currency = $7, updated_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
@@ -451,7 +463,26 @@ router.patch('/:id', requireRole('admin', 'superadmin'), async (req, res) => {
       action: 'project_updated',
       table: 'projects',
       recordId: existing.id,
-      details: { name: p.name, status: p.status, goalAmount: p.goalAmount },
+      details: {
+        before: {
+          name: existing.name,
+          description: existing.description,
+          status: existing.status,
+          startedOn: existing.started_on,
+          targetOn: existing.target_on,
+          goalAmount: num(existing.goal_amount),
+          currency: existing.currency,
+        },
+        after: {
+          name: p.name,
+          description: p.description,
+          status: p.status,
+          startedOn: p.startedOn,
+          targetOn: p.targetOn,
+          goalAmount: p.goalAmount,
+          currency: p.currency,
+        },
+      },
       ip: req.ip,
     });
     res.json({ success: true });
@@ -482,6 +513,10 @@ router.post('/:id/pledges', requireRole('admin', 'superadmin'), async (req, res)
 
     const status = PLEDGE_STATUSES.has(req.body?.status) ? req.body.status : 'open';
     const fulfilled = Math.max(0, num(req.body?.fulfilledAmount, 0));
+    if (fulfilled > amount) return res.status(400).json({ error: 'errors.fulfilledExceedsPledge' });
+    if (fulfilled === amount && status === 'open') {
+      return res.status(400).json({ error: 'errors.fulfilledPledgeMustBeCompleted' });
+    }
 
     const { rows } = await pool.query(
       `INSERT INTO project_pledges
@@ -556,6 +591,12 @@ router.patch('/:id/pledges/:pledgeId', requireRole('admin', 'superadmin'), async
 
 router.delete('/:id/pledges/:pledgeId', requireRole('admin', 'superadmin'), async (req, res) => {
   try {
+    const { rows: pledgeRows } = await pool.query('SELECT fulfilled_amount FROM project_pledges WHERE id = $1 AND project_id = $2', [
+      req.params.pledgeId,
+      req.params.id,
+    ]);
+    if (!pledgeRows[0]) return res.status(404).json({ error: 'errors.pledgeNotFound' });
+    if (num(pledgeRows[0].fulfilled_amount) > 0) return res.status(409).json({ error: 'errors.pledgeHasFulfilment' });
     const { rowCount } = await pool.query('DELETE FROM project_pledges WHERE id = $1 AND project_id = $2', [
       req.params.pledgeId,
       req.params.id,
@@ -650,6 +691,12 @@ router.patch('/:id/debts/:debtId', requireRole('admin', 'superadmin'), async (re
 
 router.delete('/:id/debts/:debtId', requireRole('admin', 'superadmin'), async (req, res) => {
   try {
+    const { rows: debtRows } = await pool.query('SELECT status FROM project_debts WHERE id = $1 AND project_id = $2', [
+      req.params.debtId,
+      req.params.id,
+    ]);
+    if (!debtRows[0]) return res.status(404).json({ error: 'errors.debtNotFound' });
+    if (debtRows[0].status === 'paid') return res.status(409).json({ error: 'errors.paidDebtCannotBeRemoved' });
     const { rowCount } = await pool.query('DELETE FROM project_debts WHERE id = $1 AND project_id = $2', [
       req.params.debtId,
       req.params.id,

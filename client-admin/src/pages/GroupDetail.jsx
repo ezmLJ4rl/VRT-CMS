@@ -15,6 +15,7 @@ import api, { apiErrorMessage } from '../api';
 import AppShell from '../components/AppShell';
 import DataTable from '../components/DataTable';
 import GroupLogo from '../components/GroupLogo';
+import MemberLink from '../components/MemberLink';
 import StatusBanner from '../components/StatusBanner';
 
 /**
@@ -145,11 +146,11 @@ export default function GroupDetail() {
                     key: 'member',
                     header: t('groups.colMember'),
                     render: (m) => (
-                      <span className="font-medium text-ink-900">
+                      <MemberLink memberId={m.id} className="font-medium text-ink-900">
                         {m.name}
                         {m.member_no && <span className="ml-2 text-xs text-ink-400">{m.member_no}</span>}
                         {!m.is_active && <span className="cat-chip category-amber ml-2">{t('members.inactive')}</span>}
-                      </span>
+                      </MemberLink>
                     ),
                   },
                   {

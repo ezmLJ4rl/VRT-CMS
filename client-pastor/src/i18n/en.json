@@ -23,7 +23,8 @@
     "events": "Events",
     "settings": "More",
     "mainNav": "Main navigation",
-    "projects": "Special Projects"
+    "projects": "Special Projects",
+    "appointments": "Appointments"
   },
   "home": {
     "greeting": "Peace be with you, {{name}}",
@@ -131,7 +132,20 @@
     "logout": "Log out",
     "installTitle": "Install this app",
     "installBody": "Add Victory Revival Temple to your home screen for the fastest access.",
-    "installButton": "Install app"
+    "installButton": "Install app",
+    "devices": "Signed-in devices",
+    "devicesHelp": "Places where this account is signed in. Logging out here ends only this device.",
+    "device": "Device",
+    "deviceThisDevice": "This device",
+    "deviceLastActive": "Last active {{when}}",
+    "signOutElsewhere": "Sign out",
+    "signOutAllDevices": "Sign out all devices",
+    "signOutAllConfirm": "Sign out on every device, including this one?",
+    "signedOutEverywhere": "All devices have been signed out.",
+    "role_receptionist": "Receptionist",
+    "role_admin": "Admin",
+    "role_pastor": "Pastor",
+    "role_superadmin": "Super Admin"
   },
   "common": {
     "nameUnavailable": "Name unavailable",
@@ -149,7 +163,9 @@
     "subtitle": "Important updates and conversations in one place.",
     "updates": "updates",
     "threads": "conversations",
-    "dailySummary": "Today's summary from the front desk",
+    "dailySummary": "Summary from the front desk",
+    "dailySummaryToday": "Today's summary from the front desk",
+    "dailySummaryForDate": "Summary from the front desk — {{date}}",
     "fromFrontDesk": "From the front desk",
     "conversations": "Conversations",
     "frontDesk": "Front desk",
@@ -180,7 +196,8 @@
     "markRead": "Mark as read",
     "sessionsShort": "services",
     "recordedShort": "recorded",
-    "uniqueAttendeesShort": "unique attendees"
+    "uniqueAttendeesShort": "unique attendees",
+    "sessionDetail": "Session"
   },
   "groupKinds": {
     "small_group": "Small group",
@@ -248,6 +265,27 @@
     "announcedBadge": "Members notified",
     "deliveryReport": "Delivery. SMS: {{smsSent}} sent{{smsFailedSuffix}} · Email: {{emailSent}} sent",
     "deliveryFailedSuffix": ", {{smsFailed}} failed"
+  },
+  "appointments": {
+    "sectionLabel": "Appointments",
+    "title": "Pastor appointments",
+    "subtitle": "Review and respond to appointment requests.",
+    "pendingTitle": "Needs your response",
+    "pendingHint": "Confirm the suggested time or offer another one.",
+    "noPending": "No appointment requests need your attention.",
+    "upcomingTitle": "Upcoming confirmed appointments",
+    "noUpcoming": "No confirmed appointments yet.",
+    "confirm": "Confirm",
+    "cantMakeIt": "Can't make it?",
+    "decline": "Decline",
+    "proposeTime": "Propose time",
+    "responseNotesPlaceholder": "Optional note for the requester",
+    "loadFailed": "Could not load appointments.",
+    "responseFailed": "Could not update this appointment.",
+    "response_confirmed": "Appointment confirmed.",
+    "response_declined": "Appointment declined.",
+    "response_rescheduled": "New time proposed.",
+    "status_confirmed": "Confirmed"
   },
   "projects": {
     "title": "Special Projects",

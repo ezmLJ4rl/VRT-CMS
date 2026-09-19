@@ -158,8 +158,14 @@ router.patch('/:id', requireRole('superadmin'), async (req, res) => {
       ip: req.ip,
     });
     if (password !== undefined) {
-      // A new password changes the account's token fingerprint, so every session
-      // that user has open is invalidated by this (see utils/token.js).
+      // A new password changes the account's token fingerprint, so every token
+      // minted against the old one fails from now on (see utils/token.js). The
+      // session rows are revoked as well, so a client that somehow kept a valid
+      // secret alongside a stale token cannot re-enter either.
+      await pool.query(
+        "UPDATE user_sessions SET revoked_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS') WHERE user_id = $1 AND revoked_at IS NULL",
+        [user.id]
+      );
       await logAudit({
         userId: req.user.id,
         action: 'password_set_by_admin',
@@ -275,7 +281,12 @@ router.post('/:id/reset-password', requireRole('superadmin'), async (req, res) =
     });
 
     // The reset changes the token fingerprint, so sessions the user already had
-    // open are dead the moment this returns, which is the point of a reset.
+    // open are dead the moment this returns, which is the point of a reset. The
+    // session rows are revoked alongside, matching the password change above.
+    await pool.query(
+      "UPDATE user_sessions SET revoked_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS') WHERE user_id = $1 AND revoked_at IS NULL",
+      [user.id]
+    );
     res.json({ id: user.id, tempPassword });
   } catch (err) {
     console.error(err);

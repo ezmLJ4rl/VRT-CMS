@@ -21,6 +21,7 @@ import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import Receipts from './pages/Receipts';
 import Reconciliation from './pages/Reconciliation';
+import Appointments from './pages/Appointments';
 
 const HOME_BY_ROLE = { receptionist: '/receptionist', admin: '/admin', superadmin: '/admin' };
 
@@ -158,6 +159,14 @@ function Router() {
             element={
               <ProtectedRoute roles={['admin', 'superadmin']}>
                 <ProjectDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/appointments"
+            element={
+              <ProtectedRoute roles={['receptionist', 'admin', 'superadmin']}>
+                <Appointments />
               </ProtectedRoute>
             }
           />

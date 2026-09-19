@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, LogOut, Menu, X } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, UserRound, X } from 'lucide-react';
 import { m } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -441,8 +441,10 @@ export default function AppHeader() {
   // exit is the one moment the panel is meant to be off-screen.
   const seated = useSettled(menuOpen ? drawer.token : null, DURATION.drawer * 1000 + 60);
 
-  function handleLogout() {
-    logout();
+  // Waits for the server to revoke THIS device's session before leaving, so a
+  // slow network cannot strand a still-valid token in another tab.
+  async function handleLogout() {
+    await logout();
     navigate('/login');
   }
 
@@ -475,11 +477,12 @@ export default function AppHeader() {
   // exit as well: the page must not scroll under a panel still sliding away.
   useEffect(() => {
     if (!mounted) return undefined;
-    const previous = document.body.style.overflow;      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = previous;
-      };
-    }, [mounted]);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mounted]);
 
   // Keep the panel under the header if the header is resized while the drawer
   // is open: a viewport change, or a longer church name/label.
@@ -532,19 +535,34 @@ export default function AppHeader() {
             <p className="truncate text-xs text-ink-400">{CHURCH_ADDRESS}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <LanguageSwitcher />
+          {/* The signed-in account: who is using THIS device, and from where
+              they leave (logout ends only this device's session). Replaces the
+              old decorative gradient strip with the one fact the bar alone
+              could not answer. */}
           {user && (
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 rounded-md border border-ink-200 px-3 py-1.5 text-sm text-ink-700 hover:border-danger-400 hover:text-danger-700"
-            >
-              <LogOut size={15} aria-hidden="true" /> {t('nav.logout')}
-            </button>
+            <div className="flex min-w-0 items-center gap-2 rounded-md border border-ink-200 bg-ink-50/60 py-1 pl-2.5 pr-1">
+              <UserRound size={14} aria-hidden="true" className="shrink-0 text-ink-500" />
+              <span className="min-w-0 truncate text-sm font-medium text-ink-800" title={user.email}>
+                {user.name}
+              </span>
+              <span className="hidden shrink-0 rounded bg-ink-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500 sm:inline">
+                {t(`settings.role_${user.role}`)}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                title={t('nav.logout')}
+                aria-label={t('nav.logout')}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-ink-500 hover:bg-danger-50 hover:text-danger-700"
+              >
+                <LogOut size={15} aria-hidden="true" />
+              </button>
+            </div>
           )}
         </div>
       </div>
-      <div className="h-0.5 w-full bg-gradient-to-r from-brand-600 via-people-600 to-transparent" />
       {barItems.length > 0 && (
         <nav
           id="app-nav-tabs"

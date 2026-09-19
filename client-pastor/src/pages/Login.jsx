@@ -82,9 +82,9 @@ export default function Login() {
 
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-canvas px-4 py-3">
-      <div className="w-full max-w-sm rounded-xl border border-ink-200 bg-paper p-4 shadow-xl sm:p-5">
+      <div className="w-full max-w-sm rounded-xl border border-ink-200 bg-paper p-5 shadow-xl sm:p-6">
         <div className="mb-3 text-center">
-          <VrtLogo size={76} className="mx-auto mb-1" />
+          <VrtLogo size={144} className="mx-auto mb-3" />
           <h1 className="font-display text-lg font-semibold leading-tight tracking-tight text-ink-900">{CHURCH_NAME}</h1>
           <p className="mt-0.5 text-xs text-ink-400">{CHURCH_LOCATION}</p>
         </div>

@@ -24,6 +24,7 @@ const emergencyRoutes = require('./routes/emergencies');
 const pushRoutes = require('./routes/push');
 const eventRoutes = require('./routes/events');
 const projectRoutes = require('./routes/projects');
+const appointmentRoutes = require('./routes/appointments');
 const paymentAccountRoutes = require('./routes/paymentAccounts');
 const paymentTransactionRoutes = require('./routes/paymentTransactions');
 const paymentWebhookRoutes = require('./routes/paymentWebhooks');
@@ -164,6 +165,7 @@ app.use('/api/emergencies', emergencyRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/appointments', appointmentRoutes);
 // Connected church payment accounts and the payments that arrive in them. Both
 // are admin/superadmin (financial detail: see the route headers); the webhook
 // receiver is public by necessity and authenticates with the account's own HMAC

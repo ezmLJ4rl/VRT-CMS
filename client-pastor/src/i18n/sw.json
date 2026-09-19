@@ -23,7 +23,8 @@
     "events": "Matukio",
     "settings": "Zaidi",
     "mainNav": "Urambazaji mkuu",
-    "projects": "Miradi Maalum"
+    "projects": "Miradi Maalum",
+    "appointments": "Miadi"
   },
   "home": {
     "greeting": "Amani iwe nawe, {{name}}",
@@ -131,7 +132,20 @@
     "logout": "Toka",
     "installTitle": "Sakinisha programu hii",
     "installBody": "Ongeza Victory Revival Temple kwenye skrini yako ya nyumbani kwa ufikiaji wa haraka zaidi.",
-    "installButton": "Sakinisha programu"
+    "installButton": "Sakinisha programu",
+    "devices": "Vifaa vinavyotumika",
+    "devicesHelp": "Sehemu ambazo akaunti hii imeingia. Kutoka hapa kunamalisha kifaa hiki pekee.",
+    "device": "Kifaa",
+    "deviceThisDevice": "Kifaa hiki",
+    "deviceLastActive": "Ilitumika mwisho {{when}}",
+    "signOutElsewhere": "Toa kwenye kifaa",
+    "signOutAllDevices": "Toa kwenye vifaa vyote",
+    "signOutAllConfirm": "Kutoka kwenye vifaa vyote, pamoja na hiki?",
+    "signedOutEverywhere": "Vifaa vyote vimetoka.",
+    "role_receptionist": "Mpokezi",
+    "role_admin": "Msimamizi",
+    "role_pastor": "Mchungaji",
+    "role_superadmin": "Msimamizi Mkuu"
   },
   "common": {
     "nameUnavailable": "Jina halipatikani",
@@ -149,7 +163,9 @@
     "subtitle": "Taarifa muhimu na mazungumzo sehemu moja.",
     "updates": "taarifa",
     "threads": "mazungumzo",
-    "dailySummary": "Muhtasari wa leo kutoka mapokezi",
+    "dailySummary": "Muhtasari kutoka mapokezi",
+    "dailySummaryToday": "Muhtasari wa leo kutoka mapokezi",
+    "dailySummaryForDate": "Muhtasari kutoka mapokezi — {{date}}",
     "fromFrontDesk": "Kutoka mapokezi",
     "conversations": "Mazungumzo",
     "frontDesk": "Mapokezi",
@@ -180,7 +196,8 @@
     "markRead": "Weka kuwa imesomwa",
     "sessionsShort": "ibada",
     "recordedShort": "yaliyorekodiwa",
-    "uniqueAttendeesShort": "wahudhuriaji wa kipekee"
+    "uniqueAttendeesShort": "wahudhuriaji wa kipekee",
+    "sessionDetail": "Kikao"
   },
   "groupKinds": {
     "small_group": "Kundi dogo",
@@ -248,6 +265,27 @@
     "announcedBadge": "Wanachama wamearifiwa",
     "deliveryReport": "Uwasilishaji. SMS: {{smsSent}} zimetumwa{{smsFailedSuffix}} · Barua pepe: {{emailSent}} zimetumwa",
     "deliveryFailedSuffix": ", {{smsFailed}} zimeshindikana"
+  },
+  "appointments": {
+    "sectionLabel": "Miadi",
+    "title": "Miadi na mchungaji",
+    "subtitle": "Kagua na jibu maombi ya miadi.",
+    "pendingTitle": "Zinahitaji jibu lako",
+    "pendingHint": "Thibitisha muda uliopendekezwa au toa mwingine.",
+    "noPending": "Hakuna maombi ya miadi yanayohitaji uangalifu wako.",
+    "upcomingTitle": "Miadi ijayo iliyothibitishwa",
+    "noUpcoming": "Hakuna miadi iliyothibitishwa bado.",
+    "confirm": "Thibitisha",
+    "cantMakeIt": "Huwezi kufika?",
+    "decline": "Kataa",
+    "proposeTime": "Pendekeza muda",
+    "responseNotesPlaceholder": "Maelezo ya hiari kwa mwombaji",
+    "loadFailed": "Imeshindwa kupakia miadi.",
+    "responseFailed": "Imeshindwa kusasisha miadi hii.",
+    "response_confirmed": "Miadi imethibitishwa.",
+    "response_declined": "Miadi imekataliwa.",
+    "response_rescheduled": "Muda mpya umependekezwa.",
+    "status_confirmed": "Imethibitishwa"
   },
   "projects": {
     "title": "Miradi Maalum",

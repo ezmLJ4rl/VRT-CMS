@@ -115,6 +115,11 @@
 }
 
 @layer base {
+  /* A page table header must never become part of the sticky application
+   * chrome. The scrollable-table exception is declared below. */
+  th {
+    position: static !important;
+  }
   html {
     font-family: var(--font-body);
     color: var(--color-ink-900);
@@ -183,6 +188,20 @@
   }
 
   /* Slim, unobtrusive scrollbar for horizontal nav/table strips on mobile. */
+  /* Table headers belong to their table, never the application chrome. Only
+   * explicitly scrollable table shells may pin a header; page tables stay in
+   * normal flow so they cannot paint beside the logo or language control. */
+  .scb thead th {
+    position: static !important;
+  }
+  .scb.has-scroll thead th {
+    position: sticky !important;
+    top: 0;
+    z-index: 1;
+    background: var(--color-paper);
+    box-shadow: 0 1px 0 var(--color-ink-200);
+  }
+
   .scb {
     scrollbar-width: thin;
     scrollbar-color: var(--color-ink-200) transparent;
@@ -256,4 +275,19 @@
     gap: 16px;
   }
   .bento > * { min-width: 0; }
+}
+
+/* Data headers are content, not app chrome. Keep ordinary page tables in flow;
+ * only a shell marked has-scroll is allowed to pin its header. */
+.scb thead th,
+.scb th {
+  position: static !important;
+  inset: auto !important;
+}
+.scb.has-scroll thead th,
+.scb.has-scroll th {
+  position: sticky !important;
+  top: 0 !important;
+  inset: auto 0 auto 0 !important;
+  z-index: 1;
 }

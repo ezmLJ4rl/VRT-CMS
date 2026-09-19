@@ -221,9 +221,11 @@ describe('sessions: long-lived and self-renewing', () => {
     const now = Math.floor(Date.now() / 1000);
     // A real session that is 20 days into a 30-day life: past the halfway mark.
     // (Passing `iat` explicitly makes jsonwebtoken anchor `exp` to it, so this is
-    // exactly what the API itself would have issued 20 days ago.)
+    // exactly what the API itself would have issued 20 days ago.) The session id
+    // is this login's real one, so the server-side session row recognises it.
+    const sid = jwt.decode(fresh.json.token).sid;
     const aged = jwt.sign(
-      { sub: row.id, role: row.role, pv: passwordFingerprint(row.password_hash), iat: now - 20 * DAY },
+      { sub: row.id, role: row.role, pv: passwordFingerprint(row.password_hash), sid, iat: now - 20 * DAY },
       suite.env.JWT_SECRET,
       { expiresIn: '30d' }
     );

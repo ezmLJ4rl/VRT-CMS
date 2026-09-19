@@ -15,6 +15,7 @@ const { generateVerificationToken, verificationUrl } = require('../utils/verific
 const { PAYMENT_REFERENCE_MAX, normalizePaymentMethod, normalizePaymentReference } = require('../utils/payments');
 const { verificationStatusFor } = require('../utils/receiptVerification');
 const { sendBatchDigest } = require('../utils/digest');
+const { projectContributionError } = require('../utils/projectRules');
 
 const router = express.Router();
 
@@ -230,9 +231,10 @@ router.post('/', restrictReceptionistToToday, async (req, res) => {
     // name (not free text) is what the receipt prints.
     let project = null;
     if (projectId) {
-      const { rows: projectRows } = await pool.query('SELECT id, name FROM projects WHERE id = $1', [projectId]);
+      const { rows: projectRows } = await pool.query('SELECT id, name, status FROM projects WHERE id = $1', [projectId]);
       project = projectRows[0] || null;
-      if (!project) return res.status(400).json({ error: 'errors.projectNotFound' });
+      const projectError = projectContributionError(project, categoryKey);
+      if (projectError) return res.status(400).json({ error: projectError });
     }
 
     let session;
@@ -393,14 +395,14 @@ router.get('/top-contributors', requireRole('admin', 'superadmin'), async (req, 
     if (to) { clauses.push('s.date <= ?'); params.push(to); }
     const where = `WHERE ${clauses.join(' AND ')}`;
     const sql = toParams(
-      `SELECT o.offerer_name_enc, o.currency, SUM(o.amount) AS total, COUNT(*) AS gifts
+      `SELECT o.member_id, o.offerer_name_enc, o.currency, SUM(o.amount) AS total, COUNT(*) AS gifts
        FROM offerings o JOIN services s ON s.id = o.service_id ${where}
-       GROUP BY o.offerer_name_enc, o.currency`
+       GROUP BY o.member_id, o.offerer_name_enc, o.currency`
     );
     const { rows } = await pool.query(sql, params);
 
     const decrypted = rows
-      .map((r) => ({ name: decryptField(r.offerer_name_enc), total: r.total, currency: r.currency, gifts: r.gifts }))
+      .map((r) => ({ memberId: r.member_id, name: decryptField(r.offerer_name_enc), total: r.total, currency: r.currency, gifts: r.gifts }))
       .sort((a, b) => b.total - a.total)
       .slice(0, Number(limit) || 10);
 

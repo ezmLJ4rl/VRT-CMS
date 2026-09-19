@@ -175,7 +175,7 @@ function buildDigestPayload(date, attendance, offerings) {
     // Do not publish one aggregate "people" total: headcounts cannot be
     // deduplicated and named attendees are only unique within their own session.
     attendanceSessions: attendance.length,
-    totalOfferings: offerings.reduce((s, o) => s + o.amount, 0),
+    totalOfferings: offerings.reduce((s, o) => s + Number(o.amount || 0), 0),
     currency: offerings[0]?.currency || 'TZS',
     attendance: attendance.map((a) => ({
       id: a.id,
@@ -206,6 +206,49 @@ function buildDigestPayload(date, attendance, offerings) {
   };
 }
 
+function parsePayload(payload) {
+  if (!payload) return {};
+  if (typeof payload === 'object') return payload;
+  try { return JSON.parse(payload); } catch { return {}; }
+}
+
+function mergeDigestPayload(existing, incoming) {
+  const attendance = new Map();
+  const offerings = new Map();
+  for (const row of [...(existing.attendance || []), ...(incoming.attendance || [])]) attendance.set(String(row.id), row);
+  for (const row of [...(existing.offerings || []), ...(incoming.offerings || [])]) offerings.set(String(row.id), row);
+  const mergedAttendance = [...attendance.values()];
+  const mergedOfferings = [...offerings.values()];
+  return {
+    ...incoming,
+    attendanceSessions: mergedAttendance.length,
+    totalOfferings: mergedOfferings.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+    currency: incoming.currency || existing.currency || 'TZS',
+    attendance: mergedAttendance,
+    offerings: mergedOfferings,
+  };
+}
+
+function attendanceRowsFromPayload(payload) {
+  return (payload.attendance || []).map((row) => ({
+    ...row,
+    type_name: row.typeName || row.type_name || String(row.label || 'Service').split(' · ')[0],
+    sub_session_name: row.subSession ?? row.sub_session_name ?? null,
+    count: row.recordedCount ?? row.count ?? 0,
+  }));
+}
+
+function offeringRowsFromPayload(payload) {
+  return (payload.offerings || []).map((row) => ({
+    ...row,
+    category_name: row.category || row.category_name || row.type,
+    type: row.type || row.category,
+    giverName: row.giver,
+    receipt_number: row.receipt,
+    session_name: row.service,
+  }));
+}
+
 /**
  * Writes the in-app feed entry and the message row on the caller's transaction
  * client so the digest never appears in the feed while the flagging of the
@@ -223,23 +266,55 @@ async function postDigestToPastor(client, { senderId, userName, locale, attendan
   const { rows: pastors } = await client.query("SELECT * FROM users WHERE role = 'pastor' AND is_active = 1 ORDER BY id ASC");
   let insertedId = null;
   const pushes = [];
+  const incoming = parsePayload(payload);
   for (const pastor of pastors) {
     const language = pastor.language_pref || locale;
     const t = translator(language);
-    const subject = t('digest.subject');
-    const body = buildDigestText(t, language, userName, attendance, offerings);
-    // The message first, then its in-app announcement: the announcement names
-    // the message it belongs to, so recalling the summary also withdraws the
-    // announcement from the pastor's notification list instead of leaving a
-    // notification for a message nobody can find. Same transaction either way.
-    const result = await client.query(
-      `INSERT INTO messages (sender_id, recipient_role, category, subject, body, payload)
-       VALUES ($1, 'pastor', $5, $2, $3, $4) RETURNING id`,
-      [senderId, subject, body, payload || null, attendance.length ? 'attendance' : 'offering']
+    // A digest is a dated document, not a send event. If a staff member sends
+    // again after recording another category, update that day's existing
+    // document instead of creating a second partial message.
+    const { rows: existingRows } = await client.query(
+      `SELECT m.id, m.payload FROM messages m
+       JOIN notifications_log n ON n.message_id = m.id AND n.channel = 'in_app' AND n.sent_to = $1
+       WHERE m.recipient_id IS NULL AND m.recipient_role = 'pastor'
+         AND m.recalled_at IS NULL AND m.category IN ('attendance', 'offering')
+         AND m.payload IS NOT NULL
+       ORDER BY m.id DESC`,
+      [pastor.email]
     );
-    const messageId = result.rows[0].id;
-    const digestCategory = attendance.length ? 'attendance_digest' : 'offering_digest';
-    await pushInApp({ to: pastor.email, message: subject, recordType: digestCategory, recordId: null, url: '/messages', messageId }, client);
+    const existing = existingRows.find((row) => parsePayload(row.payload).date === incoming.date);
+    const merged = existing ? mergeDigestPayload(parsePayload(existing.payload), incoming) : incoming;
+    const mergedAttendance = attendanceRowsFromPayload(merged);
+    const mergedOfferings = offeringRowsFromPayload(merged);
+    const subject = t('digest.subject');
+    const body = buildDigestText(t, language, userName, mergedAttendance, mergedOfferings);
+    const category = mergedAttendance.length ? 'attendance' : 'offering';
+    let messageId;
+    if (existing) {
+      await client.query(
+        'UPDATE messages SET category = $1, subject = $2, body = $3, payload = $4, read_at = NULL WHERE id = $5',
+        [category, subject, body, JSON.stringify(merged), existing.id]
+      );
+      messageId = existing.id;
+      await client.query('UPDATE notifications_log SET read_at = NULL WHERE channel = \'in_app\' AND message_id = $1', [messageId]);
+    } else {
+      const result = await client.query(
+        `INSERT INTO messages (sender_id, recipient_role, category, subject, body, payload)
+         VALUES ($1, 'pastor', $5, $2, $3, $4) RETURNING id`,
+        [senderId, subject, body, JSON.stringify(merged), category]
+      );
+      messageId = result.rows[0].id;
+    }
+    // Keep one notification twin for the dated document. An update may push
+    // again, but it never adds a second feed row or a second unread item.
+    const digestCategory = mergedAttendance.length ? 'attendance_digest' : 'offering_digest';
+    const existingTwin = await client.query(
+      'SELECT id FROM notifications_log WHERE channel = \'in_app\' AND message_id = $1 LIMIT 1',
+      [messageId]
+    );
+    if (!existingTwin.rows[0]) {
+      await pushInApp({ to: pastor.email, message: subject, recordType: digestCategory, recordId: null, url: '/messages', messageId }, client);
+    }
     pushes.push({ pastor, subject, body });
     if (insertedId === null) insertedId = messageId;
   }

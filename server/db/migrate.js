@@ -42,6 +42,55 @@ const STATEMENTS = [
            WHERE key IN ('choir_rehearsal_1','choir_rehearsal_2','pw_rehearsal')
              AND kind = 'service' AND attendance_mode = 'named'`,
   },
+  // ---- Server-side session records (see db/schema.sql for the commentary) --
+  // One row per authenticated device: concurrent logins each get their own
+  // revocable session, so multi-device use is a first-class fact, and "log out
+  // here" and "log out everywhere" are different, verifiable operations.
+  {
+    label: 'user_sessions',
+    sql: `CREATE TABLE IF NOT EXISTS user_sessions (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            sid TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+            last_active_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+            revoked_at TEXT
+          )`,
+  },
+  { label: 'user_sessions user index', sql: 'CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id)' },
+  // Appointment requests between secretary-capable staff and the pastor.
+  {
+    label: 'appointments',
+    sql: `CREATE TABLE IF NOT EXISTS appointments (
+            id SERIAL PRIMARY KEY,
+            requested_by INTEGER NOT NULL REFERENCES users(id),
+            pastor_id INTEGER NOT NULL REFERENCES users(id),
+            requested_date TEXT NOT NULL,
+            requested_time TEXT NOT NULL,
+            duration_minutes INTEGER,
+            purpose TEXT NOT NULL,
+            requester_notes TEXT,
+            status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','declined','rescheduled','completed','cancelled')),
+            proposed_date TEXT,
+            proposed_time TEXT,
+            pastor_notes TEXT,
+            created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+            updated_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+          )`,
+  },
+  { label: 'appointments requester index', sql: 'CREATE INDEX IF NOT EXISTS idx_appointments_requested_by ON appointments(requested_by)' },
+  { label: 'appointments pastor status index', sql: 'CREATE INDEX IF NOT EXISTS idx_appointments_pastor_status ON appointments(pastor_id, status)' },
+  { label: 'appointments date index', sql: 'CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(requested_date)' },
+  // Appointment messages are direct user messages, but older databases have a
+  // category constraint that predates this workflow.
+  {
+    label: 'messages appointment category',
+    sql: `DO $$ BEGIN
+            ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_category_check;
+            ALTER TABLE messages ADD CONSTRAINT messages_category_check CHECK (category IN ('attendance','offering','member_alert','event','appointment','general'));
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$`,
+  },
   // Special projects (see db/schema.sql for the full commentary). Created here
   // as well because a running church database never re-runs schema.sql: a
   // deploy must not need a manual migration step.
@@ -62,6 +111,20 @@ const STATEMENTS = [
           )`,
   },
   {
+    label: 'projects integrity constraints',
+    sql: `DO $$ BEGIN
+            ALTER TABLE projects ADD CONSTRAINT projects_status_check CHECK (status IN ('active','on_hold','completed'));
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$`,
+  },
+  {
+    label: 'projects goal constraint',
+    sql: `DO $$ BEGIN
+            ALTER TABLE projects ADD CONSTRAINT projects_goal_amount_check CHECK (goal_amount >= 0);
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$`,
+  },
+  {
     label: 'project_pledges',
     sql: `CREATE TABLE IF NOT EXISTS project_pledges (
             id SERIAL PRIMARY KEY,
@@ -79,6 +142,20 @@ const STATEMENTS = [
           )`,
   },
   {
+    label: 'project pledges integrity constraints',
+    sql: `DO $$ BEGIN
+            ALTER TABLE project_pledges ADD CONSTRAINT project_pledges_status_check CHECK (status IN ('open','fulfilled','cancelled'));
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$`,
+  },
+  {
+    label: 'project pledges amount constraint',
+    sql: `DO $$ BEGIN
+            ALTER TABLE project_pledges ADD CONSTRAINT project_pledges_amount_check CHECK (amount > 0 AND fulfilled_amount >= 0 AND fulfilled_amount <= amount);
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$`,
+  },
+  {
     label: 'project_debts',
     sql: `CREATE TABLE IF NOT EXISTS project_debts (
             id SERIAL PRIMARY KEY,
@@ -93,6 +170,20 @@ const STATEMENTS = [
             created_by INTEGER REFERENCES users(id),
             created_at TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
           )`,
+  },
+  {
+    label: 'project debts integrity constraints',
+    sql: `DO $$ BEGIN
+            ALTER TABLE project_debts ADD CONSTRAINT project_debts_status_check CHECK (status IN ('outstanding','paid'));
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$`,
+  },
+  {
+    label: 'project debts amount constraint',
+    sql: `DO $$ BEGIN
+            ALTER TABLE project_debts ADD CONSTRAINT project_debts_amount_check CHECK (amount > 0);
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$`,
   },
   {
     label: 'offerings.project_id',

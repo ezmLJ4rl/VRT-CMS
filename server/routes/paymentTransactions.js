@@ -39,6 +39,7 @@ const { findOrCreateSession } = require('../utils/sessions');
 const { insertOffering } = require('../utils/offeringRecord');
 const { verificationUrl } = require('../utils/verificationToken');
 const { MATCH_STATUSES, matchTransaction } = require('../utils/paymentIntake');
+const { projectContributionError } = require('../utils/projectRules');
 // The provider's status is an enum stored in the database, so it is labelled for
 // the reader rather than printed raw into a sentence.
 const { translator, enumLabel } = require('../i18n');
@@ -428,9 +429,10 @@ router.post('/:id/confirm', async (req, res) => {
 
     let project = null;
     if (body.projectId) {
-      const { rows } = await pool.query('SELECT id, name FROM projects WHERE id = $1', [body.projectId]);
+      const { rows } = await pool.query('SELECT id, name, status FROM projects WHERE id = $1', [body.projectId]);
       project = rows[0] || null;
-      if (!project) return res.status(400).json({ error: 'errors.projectNotFound' });
+      const projectError = projectContributionError(project, categoryKey);
+      if (projectError) return res.status(400).json({ error: projectError });
     }
 
     // How the money was paid comes from the ACCOUNT (a bank account is 'bank', a
