@@ -7,6 +7,12 @@ import StatusBanner from '../components/StatusBanner';
 function appointmentDate(a) { return a.proposedDate || a.requestedDate; }
 function appointmentTime(a) { return a.proposedTime || a.requestedTime; }
 
+function appointmentError(err, fallback, t) {
+  const key = err?.response?.data?.error;
+  if (key === 'errors.appointmentPastorUnavailable') return t('appointments.pastorUnavailable');
+  return apiErrorMessage(err, fallback);
+}
+
 export default function Appointments() {
   const { t } = useTranslation();
   const [appointments, setAppointments] = useState([]);
@@ -19,9 +25,18 @@ export default function Appointments() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get('/appointments')
+    // A deployment can briefly answer while the API is restarting. Retry once
+    // before showing an error so the page does not turn a transient outage into
+    // a misleading "not available" state.
+    const request = (attempt = 0) => api.get('/appointments').catch((err) => {
+      if (attempt === 0 && [404, 502, 503].includes(err?.response?.status)) {
+        return new Promise((resolve) => window.setTimeout(resolve, 500)).then(() => request(1));
+      }
+      throw err;
+    });
+    request()
       .then(({ data }) => { setAppointments(data.appointments || []); setError(''); })
-      .catch((err) => setError(apiErrorMessage(err, t('appointments.loadFailed'))))
+      .catch((err) => setError(appointmentError(err, t('appointments.loadFailed'), t)))
       .finally(() => setLoading(false));
   }, [t]);
   useEffect(() => { load(); }, [load]);
@@ -37,7 +52,7 @@ export default function Appointments() {
       await api.patch(`/appointments/${id}/respond`, { status, ...extra });
       setNotice(t(`appointments.response_${status}`));
       setOpenId(null); load();
-    } catch (err) { setError(apiErrorMessage(err, t('appointments.responseFailed'))); }
+    } catch (err) { setError(appointmentError(err, t('appointments.responseFailed'), t)); }
     finally { setBusyId(null); }
   }
 

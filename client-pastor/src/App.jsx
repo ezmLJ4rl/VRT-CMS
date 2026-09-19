@@ -11,6 +11,8 @@ import Home from './pages/Home';
 import Records from './pages/Records';
 import Emergencies from './pages/Emergencies';
 import Messages from './pages/Messages';
+import MessageDetail from './pages/MessageDetail';
+import MessageThreadDetail from './pages/MessageThreadDetail';
 import GroupDetail from './pages/GroupDetail';
 import Events from './pages/Events';
 import Settings from './pages/Settings';
@@ -37,6 +39,8 @@ function ShellRoutes() {
         <Route path="/records" element={<Records />} />
         <Route path="/emergencies" element={<Emergencies />} />
         <Route path="/messages" element={<Messages />} />
+        <Route path="/messages/thread/:threadKey" element={<MessageThreadDetail />} />
+        <Route path="/messages/:id" element={<MessageDetail />} />
         <Route path="/appointments" element={<Appointments />} />
         {/* Where a group update points: the group's live membership, read from
             the group's own records rather than from the message that announced

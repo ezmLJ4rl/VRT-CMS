@@ -34,15 +34,6 @@ const { todayISO, TIMEZONE } = require('./utils/date');
 const localeMiddleware = require('./middleware/locale');
 const app = express();
 
-// Self-repair on every boot: first bring an existing database up to the current
-// schema (db/migrate.js: schema.sql only ever runs on an empty database), then
-// keep offerings.type aligned with offering_categories so no report splits a
-// total by legacy spelling. Both are no-ops once applied, and neither may stop
-// the server from serving traffic.
-migrate()
-  .then(() => canonicalizeOfferingTypes())
-  .catch((err) => console.error('startup self-repair skipped:', err.message));
-
 // Behind a reverse proxy (Nginx, Render, Railway, Fly.io...), trust exactly
 // TRUST_PROXY hops so req.ip is the real client IP. This matters twice:
 //  - express-rate-limit would otherwise key on the proxy's IP, so ALL logins
@@ -219,24 +210,41 @@ app.use((err, req, res, next) => {
 // value counts and .env covers the rest. Note dotenv does not override an
 // already-exported variable, so `PORT=... npm start` intentionally beats .env.
 const PORT = Number(process.env.PORT) > 0 ? Number(process.env.PORT) : 4000;
-const server = app.listen(PORT, () => {
-  console.log(`VRT CMS API running on port ${PORT}`);
-});
-
-// A second copy of this process (or any other program) holding the port used to
-// crash with an unhandled 'error' event and a raw stack trace, which hid the
-// real problem. Report it in plain language and exit non-zero so supervisors
-// (pm2, systemd, Docker) restart cleanly instead of looping on a crash dump.
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(
-      `Port ${PORT} is already in use. Another copy of the server is probably running:\n` +
-        `  - find it:  netstat -ano | findstr :${PORT}   (Windows)\n` +
-        `              lsof -i :${PORT}                  (macOS/Linux)\n` +
-        `  - or set a different PORT in server/.env`
-    );
-  } else {
-    console.error('Failed to start server:', err);
+// Bring the database fully up to date before accepting API traffic. Starting
+// first created a race on fresh deployments: the appointments page could load
+// while its table was still being created and report a misleading "unavailable"
+// error. Migrations remain idempotent, but readiness now means the schema is
+// actually ready for requests.
+async function startServer() {
+  try {
+    await migrate();
+    await canonicalizeOfferingTypes();
+  } catch (err) {
+    console.error('startup migration failed:', err);
+    process.exitCode = 1;
+    return;
   }
-  process.exit(1);
-});
+
+  const server = app.listen(PORT, () => {
+    console.log(`VRT CMS API running on port ${PORT}`);
+  });
+
+  // A second copy of this process (or any other program) holding the port used
+  // to crash with an unhandled 'error' event and a raw stack trace, which hid
+  // the real problem. Report it plainly so the supervisor can restart cleanly.
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `Port ${PORT} is already in use. Another copy of the server is probably running:\n` +
+          `  - find it:  netstat -ano | findstr :${PORT}   (Windows)\n` +
+          `              lsof -i :${PORT}                  (macOS/Linux)\n` +
+          `  - or set a different PORT in server/.env`
+      );
+    } else {
+      console.error('Failed to start server:', err);
+    }
+    process.exit(1);
+  });
+}
+
+startServer();

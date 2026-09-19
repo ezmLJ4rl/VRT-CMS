@@ -15,4 +15,16 @@ export default defineConfig({
       },
     },
   },
+  // Keep production-preview behavior aligned with `vite dev`; otherwise the
+  // static preview server answers /api requests itself with "Not found".
+  preview: {
+    host: true,
+    port: 4173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
+  },
 });

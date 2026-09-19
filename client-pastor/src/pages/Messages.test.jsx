@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import Messages from './Messages';
@@ -87,9 +87,9 @@ describe('Pastor Messages notification taxonomy', () => {
       sent_at: new Date().toISOString(),
     }]);
 
-    expect(await screen.findByText(/5,000 TZS/)).toBeInTheDocument();
-    expect(screen.getByText(/44 recorded/)).toBeInTheDocument();
-    expect(screen.getByText(/Summary from the front desk — 14 Sept 2026/)).toBeInTheDocument();
+    expect(await screen.findByText(/44 attendance · 5,000 TZS/)).toBeInTheDocument();
+    expect(screen.getByText('14 Sept 2026')).toBeInTheDocument();
+    expect(screen.queryByText('Asha')).toBeNull();
   });
 
   it('merges legacy partial digests for the same date into one card', async () => {
@@ -112,12 +112,29 @@ describe('Pastor Messages notification taxonomy', () => {
       },
     ]);
 
-    expect((await screen.findAllByText(/Summary from the front desk — 18 Sept 2026/)).length).toBe(1);
-    expect(screen.getByText(/44 recorded/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Zaka \(Tithe\).*4,699,900 TZS/i })).toBeInTheDocument();
+    expect((await screen.findAllByText('18 Sept 2026')).length).toBe(1);
+    expect(screen.getByText(/44 attendance · 4,699,900 TZS/)).toBeInTheDocument();
+    expect(screen.queryByText('Asha')).toBeNull();
   });
 
-  it('groups offerings by category and keeps giver details collapsed until expanded', async () => {
+  it('counts distinct dated digest sections rather than repeated date fragments', async () => {
+    const makeDigest = (id, date) => ({
+      id,
+      subject: 'Today’s summary from the front desk',
+      body: 'digest',
+      payload: { date, totalOfferings: 1000, currency: 'TZS', attendance: [], offerings: [{ id, category: 'General', amount: 1000, currency: 'TZS' }] },
+      read_at: null,
+      sent_at: new Date().toISOString(),
+    });
+    renderMessages([makeDigest(21, '2026-09-19'), makeDigest(22, '2026-09-18'), makeDigest(23, '2026-09-17')]);
+
+    expect(await screen.findByText('3 updates')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /19 Sept 2026.*1,000 TZS/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /18 Sept 2026.*1,000 TZS/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /17 Sept 2026.*1,000 TZS/ })).toBeInTheDocument();
+  });
+
+  it('keeps full offering details out of the compact feed row', async () => {
     renderMessages([{
       id: 10,
       subject: 'Daily summary',
@@ -136,12 +153,9 @@ describe('Pastor Messages notification taxonomy', () => {
       sent_at: new Date().toISOString(),
     }]);
 
-    expect(await screen.findByRole('button', { name: /Zaka \(Tithe\).*7,000 TZS/i })).toBeInTheDocument();
+    expect(await screen.findByText(/0 attendance · 7,000 TZS/)).toBeInTheDocument();
     expect(screen.queryByText('Asha')).toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: /Zaka \(Tithe\).*7,000 TZS/i }));
-    expect(screen.getByText('Asha')).toBeInTheDocument();
-    expect(screen.getByText('Baraka')).toBeInTheDocument();
+    expect(screen.queryByText('Baraka')).toBeNull();
   });
 
   it('keeps direct pastoral messages visible', async () => {

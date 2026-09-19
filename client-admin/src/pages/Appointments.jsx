@@ -9,6 +9,12 @@ import StatusBanner from '../components/StatusBanner';
 const EMPTY_FORM = { requestedDate: '', requestedTime: '', purpose: '', requesterNotes: '' };
 const STATUS_KEYS = ['pending', 'confirmed', 'declined', 'rescheduled', 'completed', 'cancelled'];
 
+function appointmentError(err, fallback, t) {
+  const key = err?.response?.data?.error;
+  if (key === 'errors.appointmentPastorUnavailable') return t('appointments.pastorUnavailable');
+  return apiErrorMessage(err, fallback);
+}
+
 export default function Appointments() {
   const { t } = useTranslation();
   const [appointments, setAppointments] = useState([]);
@@ -24,7 +30,7 @@ export default function Appointments() {
     setLoading(true);
     api.get('/appointments')
       .then(({ data }) => { setAppointments(data.appointments || []); setError(''); })
-      .catch((err) => setError(apiErrorMessage(err, t('appointments.loadFailed'))))
+      .catch((err) => setError(appointmentError(err, t('appointments.loadFailed'), t)))
       .finally(() => setLoading(false));
   }, [t]);
 
@@ -43,14 +49,14 @@ export default function Appointments() {
       setNotice(t('appointments.requested'));
       load();
     } catch (err) {
-      setError(apiErrorMessage(err, t('appointments.saveFailed')));
+      setError(appointmentError(err, t('appointments.saveFailed'), t));
     } finally { setSaving(false); }
   }
 
   async function cancel(id) {
     setError('');
     try { await api.patch(`/appointments/${id}/cancel`); load(); }
-    catch (err) { setError(apiErrorMessage(err, t('appointments.saveFailed'))); }
+    catch (err) { setError(appointmentError(err, t('appointments.saveFailed'), t)); }
   }
 
   return (

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageSquare, Send, ChevronRight, Inbox, Printer, Undo2 } from 'lucide-react';
+import { MessageSquare, Send, ChevronRight, Inbox, Printer, Undo2, CheckCheck } from 'lucide-react';
 import api, { apiErrorMessage } from '../api';
 import AppShell from '../components/AppShell';
 import StatusBanner from '../components/StatusBanner';
@@ -67,6 +67,20 @@ export default function Messages() {
     loadSent();
     setLoading(false);
   }, []);
+
+  async function markAllRead() {
+    try {
+      await api.patch('/messages/read-all');
+      setConversations((prev) => ({
+        ...prev,
+        threads: prev.threads.map((thread) => ({ ...thread, unread: 0 })),
+        broadcasts: prev.broadcasts.map((broadcast) => ({ ...broadcast, read_at: broadcast.read_at || new Date().toISOString() })),
+      }));
+      setBanner({ type: 'success', message: t('messages.allMarkedRead') });
+    } catch (err) {
+      setBanner({ type: 'error', message: apiErrorMessage(err, t('messages.markReadFailed')) });
+    }
+  }
 
   async function recallMessage(m) {
     setRecallingId(m.id);
@@ -137,7 +151,12 @@ export default function Messages() {
 
   return (
     <AppShell>
-      <h1 className="mb-5 font-display text-2xl font-semibold">{t('messages.title')}</h1>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold">{t('messages.title')}</h1>
+        <button type="button" onClick={markAllRead} className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-paper px-3 py-2 text-xs font-medium text-ink-600 hover:border-brand-600 hover:text-brand-700">
+          <CheckCheck size={14} /> {t('messages.markAllRead')}
+        </button>
+      </div>
       {banner && (
         <div className="mb-5">
           <StatusBanner type={banner.type} message={banner.message} />

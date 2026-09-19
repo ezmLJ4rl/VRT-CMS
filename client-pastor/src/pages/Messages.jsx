@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageSquare, Send, ChevronDown, ChevronRight, Inbox, Users, HandCoins } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MessageSquare, ChevronDown, ChevronRight, Inbox, Users, HandCoins, CheckCheck } from 'lucide-react';
 import { m } from 'motion/react';
 import { DURATION, EASE, settled, useSettled } from '../motion';
 import api, { apiErrorMessage } from '../api';
 import StatusBanner from '../components/StatusBanner';
-import { useAuth } from '../context/AuthContext';
 import { useUnread } from '../context/UnreadContext';
 import { formatDate } from '../format';
 import { attendanceMetrics } from '../attendanceMetrics';
@@ -18,21 +18,6 @@ function timeLabel(iso) {
   const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(d);
   if (sameDay) return time;
   return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(d);
-}
-
-function churchTodayISO() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Africa/Dar_es_Salaam',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date()).reduce((out, part) => ({ ...out, [part.type]: part.value }), {});
-  return `${parts.year}-${parts.month}-${parts.day}`;
-}
-
-function digestTitle(t, i18n, date) {
-  if (date === churchTodayISO()) return t('messages.dailySummaryToday');
-  return t('messages.dailySummaryForDate', { date: formatDate(date, i18n.language) });
 }
 
 function isRoutineGroupMembershipNotice(message) {
@@ -77,6 +62,39 @@ function mergeDigestBroadcasts(broadcasts) {
   return merged;
 }
 
+function isDigestBroadcast(broadcast) {
+  return Boolean(broadcast.payload?.date && (broadcast.payload.attendance || broadcast.payload.offerings));
+}
+
+function groupBroadcastSections(broadcasts) {
+  const sections = [];
+  const byDate = new Map();
+  for (const broadcast of broadcasts) {
+    if (isDigestBroadcast(broadcast)) {
+      const existing = byDate.get(broadcast.payload.date);
+      if (existing) continue;
+      const section = { key: `digest:${broadcast.payload.date}`, date: broadcast.payload.date, digest: broadcast };
+      byDate.set(broadcast.payload.date, section);
+      sections.push(section);
+    } else {
+      sections.push({ key: `broadcast:${broadcast.id}`, broadcast });
+    }
+  }
+  return sections;
+}
+
+function attendanceTotal(sessions) {
+  return sessions.reduce((total, session) => total + Number(session.recordedCount ?? session.count ?? 0), 0);
+}
+
+function broadcastPreview(t, broadcast) {
+  if (isDigestBroadcast(broadcast)) {
+    const payload = broadcast.payload;
+    return `${attendanceTotal(payload.attendance || []).toLocaleString()} ${t('messages.attendanceTotalShort')} · ${Number(payload.totalOfferings || 0).toLocaleString()} ${payload.currency || 'TZS'}`;
+  }
+  return String(broadcast.body || broadcast.subject || '').split(/\r?\n/)[0];
+}
+
 function attendanceMetricsForMessage(t, session) {
   return attendanceMetrics(session).map((metric) => ({
     ...metric,
@@ -110,7 +128,7 @@ function groupOfferings(gifts) {
   return [...groups.values()];
 }
 
-function DigestCard({ t, i18n, b, onMarkRead }) {
+export function DigestCard({ t, b, onMarkRead }) {
   const p = b.payload || {};
   const sessions = p.attendance || [];
   const gifts = p.offerings || [];
@@ -128,14 +146,10 @@ function DigestCard({ t, i18n, b, onMarkRead }) {
 
   return (
     <div className="overflow-hidden rounded-lg border border-people-200 bg-people-50">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-people-100 bg-white/60 px-3 py-2.5">
-        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-semibold text-ink-900">
-          <Inbox size={14} className="shrink-0 text-people-700" />
-          {formatDate(p.date, i18n.language)} ·
-          <span className="flex items-center gap-1 text-people-700"><Users size={13} className="shrink-0" /> {sessions.length} {t('messages.sessionsShort')}</span>
-          <span className="flex items-center gap-1 text-offering-700"><HandCoins size={13} className="shrink-0" /> {Number(p.totalOfferings || 0).toLocaleString()} {p.currency || 'TZS'}</span>
-        </p>
-        {b.read_at ? <span className="text-xs text-ink-400">{t('messages.read')}</span> : <button type="button" onClick={onMarkRead} className="text-xs font-medium text-brand-700 hover:underline">{t('messages.markRead')}</button>}
+      <div className="flex flex-wrap items-center gap-3 border-b border-people-100 bg-white/60 px-3 py-2.5 text-sm font-semibold">
+        {b.read_at ? <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-medium text-ink-500">{t('messages.read')}</span> : <button type="button" onClick={onMarkRead} className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700 hover:bg-brand-100">{t('messages.markRead')}</button>}
+        <span className="flex items-center gap-1.5 text-people-700"><Users size={14} className="shrink-0" /> {attendanceTotal(sessions).toLocaleString()} {t('messages.attendanceTotalShort')}</span>
+        <span className="flex items-center gap-1.5 text-offering-700"><HandCoins size={14} className="shrink-0" /> {Number(p.totalOfferings || 0).toLocaleString()} {p.currency || 'TZS'}</span>
       </div>
 
       {attendanceGroups.length > 0 && (
@@ -211,16 +225,12 @@ function BroadcastNotice({ fresh, children }) {
 
 export default function Messages() {
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
+  const navigate = useNavigate();
   // The badge is not this screen's to own: it re-reads the shared count after
   // clearing something, so the nav pill and the Home tile stay in step.
   const { refresh: refreshUnread } = useUnread();
   const [conversations, setConversations] = useState({ threads: [], broadcasts: [] });
-  const [activeThread, setActiveThread] = useState(null);
-  const [threadMessages, setThreadMessages] = useState([]);
-  const [reply, setReply] = useState('');
   const [banner, setBanner] = useState(null);
-  const [sending, setSending] = useState(false);
   // The broadcast ids already on screen, so the next poll can tell which ones
   // the desk has just added, and those are the only ones that animate in.
   const seenBroadcasts = useRef(null);
@@ -257,6 +267,21 @@ export default function Messages() {
     return () => clearInterval(interval);
   }, [refreshUnread]);
 
+  async function markAllRead() {
+    try {
+      await api.patch('/messages/read-all');
+      setConversations((prev) => ({
+        ...prev,
+        broadcasts: prev.broadcasts.map((item) => ({ ...item, read_at: item.read_at || new Date().toISOString() })),
+        threads: prev.threads.map((thread) => ({ ...thread, unread: 0 })),
+      }));
+      refreshUnread();
+      setBanner({ type: 'success', message: t('messages.allMarkedRead') });
+    } catch (err) {
+      setBanner({ type: 'error', message: apiErrorMessage(err, t('messages.markReadFailed')) });
+    }
+  }
+
   async function markBroadcastRead(b) {
     if (b.read_at) return;
     const sourceIds = b.sourceIds || [b.id];
@@ -268,46 +293,11 @@ export default function Messages() {
     refreshUnread();
   }
 
-  function openThread(thread) {
-    setActiveThread(thread);
-    api
-      .get(`/messages/${thread.id}`)
-      .then(({ data }) => {
-        setThreadMessages(data.messages);
-        const unread = data.messages.filter((m) => !m.read_at);
-        if (unread.length) {
-          Promise.all(unread.map((m) => api.patch(`/messages/${m.id}/read`).catch(() => {}))).then(() => refreshUnread());
-        }
-        loadConversations();
-      })
-      .catch((err) => setBanner({ type: 'error', message: apiErrorMessage(err) }));
-  }
-
-  async function sendReply(e) {
-    e.preventDefault();
-    if (!activeThread || !reply.trim()) return;
-    setSending(true);
-    try {
-      await api.post('/messages', {
-        recipientId: activeThread.partner.id,
-        category: 'general',
-        subject: `Re: ${activeThread.last.subject.replace(/^Re: /, '')}`,
-        body: reply,
-      });
-      setReply('');
-      loadConversations();
-      api.get(`/messages/${activeThread.id}`).then(({ data }) => setThreadMessages(data.messages));
-    } catch (err) {
-      setBanner({ type: 'error', message: apiErrorMessage(err) });
-    } finally {
-      setSending(false);
-    }
-  }
-
   const sortedThreads = useMemo(
     () => [...conversations.threads].sort((a, b) => new Date(b.last.sentAt) - new Date(a.last.sentAt)),
     [conversations.threads]
   );
+  const broadcastSections = useMemo(() => groupBroadcastSections(conversations.broadcasts), [conversations.broadcasts]);
   const unreadBroadcasts = conversations.broadcasts.filter((item) => !item.read_at).length;
   const unreadThreads = sortedThreads.reduce((total, thread) => total + Number(thread.unread || 0), 0);
   const unreadTotal = unreadBroadcasts + unreadThreads;
@@ -320,9 +310,12 @@ export default function Messages() {
           <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-ink-900">{t('messages.title')}</h1>
           <p className="mt-1 max-w-xl text-sm text-ink-500">{t('messages.subtitle', 'Important updates and conversations in one place.')}</p>
         </div>
-        <div className="rounded-xl border border-ink-200 bg-paper px-4 py-2 text-right shadow-xs">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">{t('messages.unread', 'Unread')}</p>
-          <p className="font-display text-xl font-semibold tabular-nums text-brand-700">{unreadTotal}</p>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={markAllRead} className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-paper px-3 py-2 text-xs font-medium text-ink-600 hover:border-brand-600 hover:text-brand-700"><CheckCheck size={14} /> {t('messages.markAllRead')}</button>
+          <div className="rounded-xl border border-ink-200 bg-paper px-4 py-2 text-right shadow-xs">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">{t('messages.unread', 'Unread')}</p>
+            <p className="font-display text-xl font-semibold tabular-nums text-brand-700">{unreadTotal}</p>
+          </div>
         </div>
       </header>
       {banner && (
@@ -331,33 +324,39 @@ export default function Messages() {
         </div>
       )}
 
-      {conversations.broadcasts.filter((b) => !isRoutineGroupMembershipNotice(b)).length > 0 && (
+      {broadcastSections.length > 0 && (
         <section className="rounded-2xl border border-ink-200 bg-paper p-3 shadow-sm sm:p-4">
           <div className="mb-3 flex items-center justify-between gap-3 border-b border-ink-100 pb-3">
             <h2 className="flex items-center gap-1.5 font-display text-base font-semibold"><Inbox size={15} className="text-ink-600" /> {t('messages.fromFrontDesk')}</h2>
-            <span className="text-xs text-ink-400">{conversations.broadcasts.length} {t('messages.updates', 'updates')}</span>
+            <span className="text-xs text-ink-400">{broadcastSections.length} {t('messages.updates', 'updates')}</span>
           </div>
-          <ul className="space-y-2.5">
-            {conversations.broadcasts.filter((b) => !isRoutineGroupMembershipNotice(b)).map((b) => (
-              <BroadcastNotice key={b.id} fresh={freshBroadcasts.includes(b.id)}>
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-ink-900">{b.payload?.attendance || b.payload?.offerings ? (b.payload.date ? digestTitle(t, i18n, b.payload.date) : t('messages.dailySummary')) : b.subject}</p>
-                  <span className="shrink-0 text-xs text-ink-400">{timeLabel(b.sent_at)}</span>
-                </div>
-                {b.payload?.attendance || b.payload?.offerings ? (
-                  <DigestCard t={t} i18n={i18n} b={b} onMarkRead={() => markBroadcastRead(b)} />
-                ) : (
-                  <div className="rounded-lg border border-ink-100 p-3">
-                    {b.body && <p className="whitespace-pre-wrap text-sm text-ink-600">{b.body}</p>}
-                    {!b.read_at && (
-                      <button type="button" onClick={() => markBroadcastRead(b)} className="mt-2 text-xs font-medium text-brand-700 hover:underline">
-                        {t('messages.markRead')}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </BroadcastNotice>
-            ))}
+          <ul className="divide-y divide-ink-100">
+            {broadcastSections.map((section) => {
+              const broadcast = section.digest || section.broadcast;
+              const digest = Boolean(section.digest);
+              const date = digest ? formatDate(section.date, i18n.language) : timeLabel(broadcast.sent_at);
+              return (
+                <BroadcastNotice key={section.key} fresh={freshBroadcasts.includes(broadcast.id)}>
+                    <button
+                      type="button"
+                      onClick={() => { markBroadcastRead(broadcast); navigate(`/messages/${broadcast.id}`); }}
+                      className="flex w-full items-center gap-3 py-3 text-left hover:bg-ink-50"
+                    >
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${digest ? 'bg-brand-50 text-brand-700' : 'bg-ink-100 text-ink-600'}`}>
+                        {digest ? <Inbox size={15} /> : <MessageSquare size={15} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2 text-sm font-medium text-ink-900">
+                          <span className="truncate">{date}</span>
+                          {!broadcast.read_at && <span className="h-2 w-2 shrink-0 rounded-full bg-brand-600" aria-label={t('messages.unread')} />}
+                        </span>
+                        <span className="block truncate text-xs text-ink-500">{broadcastPreview(t, broadcast)}</span>
+                      </span>
+                      <ChevronRight size={16} className="shrink-0 text-ink-300" />
+                    </button>
+                </BroadcastNotice>
+              );
+            })}
           </ul>
         </section>
       )}
@@ -373,7 +372,7 @@ export default function Messages() {
           <ul className="divide-y divide-ink-100">
             {sortedThreads.map((thread) => (
               <li key={thread.id}>
-                <button type="button" onClick={() => openThread(thread)} className="flex w-full items-center gap-3 py-3 text-left">
+                <button type="button" onClick={() => navigate(`/messages/thread/${thread.id}`)} className="flex w-full items-center gap-3 py-3 text-left">
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-2 text-sm font-medium text-ink-900">
                       <span className="truncate">{thread.partner?.name || t('messages.frontDesk')}</span>
@@ -382,8 +381,7 @@ export default function Messages() {
                       )}
                     </p>
                     <p className="truncate text-xs text-ink-400">{thread.last.subject}</p>
-                  </div>
-                  <span className="shrink-0 text-xs text-ink-400">{timeLabel(thread.last.sentAt)}</span>
+                  </div>                  <span className="shrink-0 text-xs text-ink-400">{timeLabel(thread.last.sentAt)}</span>
                   <ChevronRight size={15} className="shrink-0 text-ink-300" />
                 </button>
               </li>
@@ -392,34 +390,6 @@ export default function Messages() {
         )}
       </section>
 
-      {activeThread ? (
-        <section className="rounded-xl border border-ink-200 bg-paper p-4 shadow-sm">
-          <h2 className="mb-2 font-display text-base font-semibold">{activeThread.partner?.name || t('messages.frontDesk')}</h2>
-          <ul className="mb-3 max-h-80 space-y-2 overflow-auto">
-            {threadMessages.map((m) => (
-              <li key={m.id} className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${m.sender_id === user?.id ? 'ml-auto bg-brand-600 text-white' : 'bg-ink-100 text-ink-800'}`}>
-                <p className="text-xs opacity-70">{m.sender_id === user?.id ? t('messages.you') : t('messages.frontDesk')} · {timeLabel(m.sent_at)}</p>
-                {m.body && <p className="mt-0.5 whitespace-pre-wrap">{m.body}</p>}
-              </li>
-            ))}
-          </ul>
-          <form onSubmit={sendReply} className="flex gap-2">
-            <textarea
-              value={reply}
-              onChange={(e) => setReply(e.target.value)}
-              rows={2}
-              required
-              placeholder={t('messages.replyPlaceholder')}
-              className="flex-1 rounded-md border border-ink-200 px-3 py-2 text-sm focus-visible:border-brand-600"
-            />
-            <button type="submit" disabled={sending || !reply.trim()} className="btn btn-primary" title={t('messages.send')}>
-              <Send size={15} />
-            </button>
-          </form>
-        </section>
-      ) : (
-        <p className="rounded-xl border border-dashed border-ink-200 p-6 text-center text-sm text-ink-400">{t('messages.pickThread')}</p>
-      )}
     </div>
   );
 }

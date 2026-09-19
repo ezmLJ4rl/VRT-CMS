@@ -91,6 +91,24 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/messages/broadcast/:id: canonical detail for a broadcast message.
+// The list endpoint intentionally carries only enough data to scan; this route
+// supplies the full digest/notification payload for the dedicated detail page.
+router.get('/broadcast/:id', requireRole('pastor'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM messages
+       WHERE id = $1 AND recipient_id IS NULL AND recipient_role = 'pastor' AND recalled_at IS NULL`,
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'errors.messageNotFound' });
+    res.json({ message: decorate(rows[0]) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'errors.failedLoadMessage' });
+  }
+});
+
 // GET /api/messages/unread: one lightweight count the apps poll for badges.
 //
 // `total` is the single number every badge in the pastor app shows: the nav
@@ -331,6 +349,33 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'errors.failedSendMessage' });
+  }
+});
+
+// PATCH /api/messages/read-all
+// Marks every message and notification currently visible to this user as read.
+// It clears the badge without deleting history or changing the sender's copy.
+router.patch('/read-all', async (req, res) => {
+  try {
+    const me = req.user;
+    await pool.query(
+      `UPDATE messages
+          SET read_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+        WHERE recalled_at IS NULL AND read_at IS NULL
+          AND ((recipient_id = $1) OR (recipient_id IS NULL AND recipient_role = $2)
+               OR (thread_key IS NOT NULL AND (sender_id = $1 OR recipient_id = $1)))`,
+      [me.id, me.role]
+    );
+    await pool.query(
+      `UPDATE notifications_log
+          SET read_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+        WHERE sent_to = $1 AND read_at IS NULL`,
+      [me.email]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'errors.failedMarkMessageRead' });
   }
 });
 

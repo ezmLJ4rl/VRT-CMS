@@ -45,6 +45,7 @@
   "errors.appointmentOwnRequestsOnly": "You can only cancel your own appointment requests.",
   "errors.appointmentCannotCancel": "This appointment cannot be cancelled now.",
   "errors.failedLoadAppointments": "Failed to load appointments.",
+  "errors.failedLoadMessage": "Failed to load the message.",
   "errors.failedCreateAppointment": "Failed to request the appointment.",
   "errors.failedRespondAppointment": "Failed to update the appointment.",
   "errors.failedCancelAppointment": "Failed to cancel the appointment.",

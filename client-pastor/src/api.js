@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api' });
+// Vite dev proxies /api, but its preview server does not reliably do so
+// across older Vite versions. Point local production previews directly at the
+// local API; deployed builds still use VITE_API_URL (or same-origin /api).
+const isLocalPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  && ['4173', '4174'].includes(window.location.port);
+const apiBase = import.meta.env.VITE_API_URL || (isLocalPreview ? 'http://localhost:4000/api' : '/api');
+const api = axios.create({ baseURL: apiBase });
 
 // Request config fields the interceptors own. A request carrying
 // `_skipAuthRedirect` (the deliberate logout) must never leak onto the wire.

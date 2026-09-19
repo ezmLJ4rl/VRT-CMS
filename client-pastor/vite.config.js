@@ -55,4 +55,17 @@ export default defineConfig({
       },
     },
   },
+  // `vite preview` does not inherit the dev-server proxy. Without this,
+  // preview builds send /api/appointments to the static file server, which
+  // returns the misleading "Not found" message instead of reaching Express.
+  preview: {
+    host: true,
+    port: 4174,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
+  },
 });

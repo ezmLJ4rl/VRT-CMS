@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 import AppShell from './AppShell';
 import { AuthProvider } from '../context/AuthContext';
-import { TABS } from '../nav';
+import { PRIMARY_TABS } from '../nav';
 import i18n from '../i18n';
 
 // No network and no unread provider: the shell takes its counts as props, so the
@@ -27,7 +27,7 @@ const tabs = () => document.getElementById('app-nav-tabs');
 const bar = () => document.getElementById('app-nav-bar');
 const linkIn = (nav, label) => within(nav).getByRole('link', { name: new RegExp(label) });
 
-const EN_LABELS = ['Home', 'Records', 'Alerts', 'Events', 'Messages', 'Appointments', 'Special Projects', 'More'];
+const EN_PRIMARY_LABELS = ['Home', 'Records', 'Alerts', 'Messages'];
 
 beforeEach(async () => {
   await i18n.changeLanguage('en');
@@ -38,13 +38,14 @@ afterEach(async () => {
 });
 
 describe('Pastor nav: the same destinations in both presentations', () => {
-  it('renders every destination, in one order, in the bottom bar and the tab bar', async () => {
+  it('keeps exactly four primary links plus More in both navigation presentations', async () => {
     renderShell();
 
     for (const nav of [bar(), tabs()]) {
       const links = within(nav).getAllByRole('link');
-      expect(links.map((l) => l.textContent)).toEqual(EN_LABELS);
-      expect(links.map((l) => l.getAttribute('href'))).toEqual(TABS.map((t) => t.to));
+      expect(links.map((l) => l.textContent)).toEqual(EN_PRIMARY_LABELS);
+      expect(links.map((l) => l.getAttribute('href'))).toEqual(PRIMARY_TABS.map((tab) => tab.to));
+      expect(within(nav).getByRole('button', { name: 'More' })).toBeInTheDocument();
     }
   });
 
@@ -52,8 +53,8 @@ describe('Pastor nav: the same destinations in both presentations', () => {
     renderShell();
 
     for (const nav of [bar(), tabs()]) {
-      for (const link of within(nav).getAllByRole('link')) {
-        expect(link.querySelector('svg')).toBeTruthy();
+      for (const item of [...within(nav).getAllByRole('link'), ...within(nav).getAllByRole('button')]) {
+        expect(item.querySelector('svg')).toBeTruthy();
       }
     }
   });
@@ -66,7 +67,6 @@ describe('Pastor nav: the same destinations in both presentations', () => {
     expect(bar().className).toContain('lg:hidden');
     expect(tabs().className).toContain('hidden');
     expect(tabs().className).toContain('lg:flex');
-    expect(tabs().className).toContain('flex-wrap');
     expect(tabs().className).not.toContain('overflow-x-auto');
     expect(bar().className).not.toContain('overflow-x-auto');
   });
@@ -87,7 +87,7 @@ describe('Pastor nav: badges', () => {
 
     for (const nav of [bar(), tabs()]) {
       expect(within(nav).getByRole('link', { name: /Home/ }).textContent).toBe('Home');
-      expect(within(nav).getAllByRole('link').map((l) => l.textContent)).toEqual(EN_LABELS);
+      expect(within(nav).getAllByRole('link').map((l) => l.textContent)).toEqual(EN_PRIMARY_LABELS);
     }
   });
 
@@ -100,8 +100,7 @@ describe('Pastor nav: badges', () => {
       expect(linkIn(nav, 'Messages')).toHaveTextContent('5');
       expect(linkIn(nav, 'Home').textContent).toBe('Home');
       expect(linkIn(nav, 'Records').textContent).toBe('Records');
-      expect(linkIn(nav, 'Events').textContent).toBe('Events');
-      expect(linkIn(nav, 'More').textContent).toBe('More');
+      expect(within(nav).getByRole('button', { name: 'More' })).toBeInTheDocument();
     }
   });
 
@@ -139,12 +138,9 @@ describe('Pastor nav: language', () => {
         'Nyumbani',
         'Kumbukumbu',
         'Arifa',
-        'Matukio',
         'Ujumbe',
-        'Miadi',
-        'Miradi Maalum',
-        'Zaidi',
       ]);
+      expect(within(nav).getByRole('button', { name: 'Zaidi' })).toBeInTheDocument();
     }
     expect(tabs()).toHaveAccessibleName('Urambazaji mkuu');
   });

@@ -45,6 +45,7 @@
   "errors.appointmentOwnRequestsOnly": "Unaweza kughairi maombi yako ya miadi tu.",
   "errors.appointmentCannotCancel": "Miadi hii haiwezi kughairiwa sasa.",
   "errors.failedLoadAppointments": "Imeshindwa kupakia miadi.",
+  "errors.failedLoadMessage": "Imeshindwa kupakia ujumbe.",
   "errors.failedCreateAppointment": "Imeshindwa kuomba miadi.",
   "errors.failedRespondAppointment": "Imeshindwa kusasisha miadi.",
   "errors.failedCancelAppointment": "Imeshindwa kughairi miadi.",
